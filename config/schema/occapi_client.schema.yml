@@ -1,0 +1,14 @@
+occapi_client.occapi_provider.*:
+  type: config_entity
+  label: OCCAPI provider
+  mapping:
+    id:
+      type: string
+      label: ID
+    label:
+      type: label
+      label: Label
+    uuid:
+      type: string
+    description:
+      type: string

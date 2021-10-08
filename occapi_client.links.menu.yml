@@ -1,0 +1,11 @@
+occapi_client.admin:
+  title: 'OCCAPI client'
+  route_name: occapi_client.admin
+  description: 'Settings for OCCAPI client'
+  parent: system.admin_config_services
+
+entity.occapi_provider.overview:
+  title: OCCAPI providers
+  parent: occapi_client.admin
+  description: 'List of OCCAPI providers.'
+  route_name: entity.occapi_provider.collection

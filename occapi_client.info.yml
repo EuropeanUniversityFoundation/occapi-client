@@ -1,0 +1,6 @@
+name: OCCAPI client
+type: module
+description: 'Provides an OCCAPI provider configuration entity.'
+package: OCCAPI
+core_version_requirement: ^8 || ^9
+configure: entity.occapi_provider.collection

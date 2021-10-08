@@ -1,0 +1,13 @@
+{
+  "name": "euf/occapi_client",
+  "type": "drupal-module",
+  "description": "Drupal implementation of an Open Course Catalogue API client.",
+  "keywords": [
+  ],
+  "homepage": "",
+  "minimum-stability": "dev",
+  "support": {
+    "issues": "",
+    "source": ""
+  }
+}

@@ -1,0 +1,39 @@
+occapi_client.admin:
+  path: '/admin/config/services/occapi'
+  defaults:
+    _controller: '\Drupal\system\Controller\SystemController::systemAdminMenuBlockPage'
+    _title: 'OCCAPI client'
+  requirements:
+    _permission: 'administer occapi_provider'
+
+entity.occapi_provider.collection:
+  path: '/admin/config/services/occapi/occapi-provider'
+  defaults:
+    _entity_list: 'occapi_provider'
+    _title: 'OCCAPI provider configuration'
+  requirements:
+    _permission: 'administer occapi_provider'
+
+entity.occapi_provider.add_form:
+  path: '/admin/config/services/occapi/occapi_provider/add'
+  defaults:
+    _entity_form: 'occapi_provider.add'
+    _title: 'Add an OCCAPI provider'
+  requirements:
+    _permission: 'administer occapi_provider'
+
+entity.occapi_provider.edit_form:
+  path: '/admin/config/services/occapi/occapi-provider/{occapi_provider}'
+  defaults:
+    _entity_form: 'occapi_provider.edit'
+    _title: 'Edit an OCCAPI provider'
+  requirements:
+    _permission: 'administer occapi_provider'
+
+entity.occapi_provider.delete_form:
+  path: '/admin/config/services/occapi/occapi-provider/{occapi_provider}/delete'
+  defaults:
+    _entity_form: 'occapi_provider.delete'
+    _title: 'Delete an OCCAPI provider'
+  requirements:
+    _permission: 'administer occapi_provider'

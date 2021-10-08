@@ -1,0 +1,5 @@
+entity.occapi_provider.add_form:
+  route_name: 'entity.occapi_provider.add_form'
+  title: 'Add OCCAPI provider'
+  appears_on:
+    - entity.occapi_provider.collection
