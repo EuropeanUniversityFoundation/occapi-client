@@ -1,0 +1,7 @@
+services:
+  occapi_client.fetch:
+    class: Drupal\occapi_client\JsonDataFetcher
+    arguments: ['@http_client', '@occapi_client.json', '@logger.factory', '@tempstore.shared', '@string_translation']
+  occapi_client.json:
+    class: Drupal\occapi_client\JsonDataProcessor
+    arguments: ['@logger.factory', '@string_translation']
