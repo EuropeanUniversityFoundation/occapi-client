@@ -42,6 +42,9 @@ use Drupal\occapi_client\OccapiProviderInterface;
  *   config_export = {
  *     "id",
  *     "label",
+ *     "base_url",
+ *     "hei_id",
+ *     "ounit_filter",
  *     "description"
  *   }
  * )
@@ -49,28 +52,49 @@ use Drupal\occapi_client\OccapiProviderInterface;
 class OccapiProvider extends ConfigEntityBase implements OccapiProviderInterface {
 
   /**
-   * The occapi provider ID.
+   * The OCCAPI provider ID.
    *
    * @var string
    */
   protected $id;
 
   /**
-   * The occapi provider label.
+   * The OCCAPI provider label.
    *
    * @var string
    */
   protected $label;
 
   /**
-   * The occapi provider status.
+   * The OCCAPI provider base URL.
+   *
+   * @var string
+   */
+  protected $base_url;
+
+  /**
+   * The Institution SCHAC code covered by the OCCAPI provider.
+   *
+   * @var string
+   */
+  protected $hei_id;
+
+  /**
+   * Support for filtering by Organizational Unit.
+   *
+   * @var bool
+   */
+  protected $ounit_filter;
+
+  /**
+   * The OCCAPI provider status.
    *
    * @var bool
    */
   protected $status;
 
   /**
-   * The occapi_provider description.
+   * The OCCAPI provider description.
    *
    * @var string
    */

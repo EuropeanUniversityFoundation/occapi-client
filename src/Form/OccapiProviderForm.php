@@ -37,6 +37,36 @@ class OccapiProviderForm extends EntityForm {
       '#disabled' => !$this->entity->isNew(),
     ];
 
+    $form['api_params'] = [
+      '#type' => 'fieldset',
+      '#title' => $this->t('API parameters'),
+      '#tree' => FALSE,
+    ];
+
+    $form['api_params']['base_url'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Base URL'),
+      '#maxlength' => 255,
+      '#default_value' => $this->entity->get('base_url'),
+      '#description' => $this->t('Format: <em>https://domain.tld/occapi</em>'),
+      '#required' => TRUE,
+    ];
+
+    $form['api_params']['hei_id'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Institution ID'),
+      '#maxlength' => 255,
+      '#default_value' => $this->entity->get('hei_id'),
+      '#description' => $this->t('Format: <em>domain.tld</em>'),
+      '#required' => TRUE,
+    ];
+
+    $form['api_params']['ounit_filter'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Filter by Organizational Unit'),
+      '#default_value' => $this->entity->get('ounit_filter'),
+    ];
+
     $form['status'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Enabled'),

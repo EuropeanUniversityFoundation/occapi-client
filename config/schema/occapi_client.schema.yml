@@ -8,6 +8,15 @@ occapi_client.occapi_provider.*:
     label:
       type: label
       label: Label
+    base_url:
+      type: string
+      label: 'Base URL'
+    hei_id:
+      type: string
+      label: 'Institution SCHAC code'
+    ounit_filter:
+      type: boolean
+      label: 'Filter by Organizational Unit'
     uuid:
       type: string
     description:
