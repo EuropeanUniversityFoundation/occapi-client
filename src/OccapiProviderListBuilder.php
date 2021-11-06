@@ -37,4 +37,25 @@ class OccapiProviderListBuilder extends ConfigEntityListBuilder {
     return $row + parent::buildRow($entity);
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function buildOperations(EntityInterface $entity) {
+    $operations = $this->getOperations($entity);
+
+    $operations['preview'] = [
+        'title' => $this->t('Preview'),
+        'weight' => 20,
+        'url' => $this->ensureDestination($entity->toUrl('preview-form')),
+    ];
+
+    uasort($operations, '\\Drupal\\Component\\Utility\\SortArray::sortByWeightElement');
+
+    $build = [
+      '#type' => 'operations',
+      '#links' => $operations,
+    ];
+    return $build;
+  }
+
 }

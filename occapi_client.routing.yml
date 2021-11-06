@@ -30,6 +30,14 @@ entity.occapi_provider.edit_form:
   requirements:
     _permission: 'administer occapi_provider'
 
+entity.occapi_provider.preview_form:
+  path: '/admin/config/services/occapi/occapi-provider/{occapi_provider}/preview'
+  defaults:
+    _entity_form: 'occapi_provider.preview'
+    _title: 'Preview OCCAPI provider data'
+  requirements:
+    _permission: 'administer occapi_provider'
+
 entity.occapi_provider.delete_form:
   path: '/admin/config/services/occapi/occapi-provider/{occapi_provider}/delete'
   defaults:

@@ -23,6 +23,7 @@ use Drupal\occapi_client\OccapiProviderInterface;
  *     "form" = {
  *       "add" = "Drupal\occapi_client\Form\OccapiProviderForm",
  *       "edit" = "Drupal\occapi_client\Form\OccapiProviderForm",
+ *       "preview" = "Drupal\occapi_client\Form\OccapiProviderPreviewForm",
  *       "delete" = "Drupal\Core\Entity\EntityDeleteForm"
  *     }
  *   },
@@ -32,6 +33,7 @@ use Drupal\occapi_client\OccapiProviderInterface;
  *     "collection" = "/admin/config/services/occapi/occapi-provider",
  *     "add-form" = "/admin/config/services/occapi/occapi-provider/add",
  *     "edit-form" = "/admin/config/services/occapi/occapi-provider/{occapi_provider}",
+ *     "preview-form" = "/admin/config/services/occapi/occapi-provider/{occapi_provider}/preview",
  *     "delete-form" = "/admin/config/services/occapi/occapi-provider/{occapi_provider}/delete"
  *   },
  *   entity_keys = {

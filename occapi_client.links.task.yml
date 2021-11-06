@@ -1,0 +1,17 @@
+entity.occapi_provider.edit_form:
+  route_name: entity.occapi_provider.edit_form
+  base_route: entity.occapi_provider.edit_form
+  title: 'Edit'
+  weight: 1
+
+entity.occapi_provider.preview_form:
+  route_name: entity.occapi_provider.preview_form
+  base_route: entity.occapi_provider.edit_form
+  title: 'Preview'
+  weight: 2
+
+entity.occapi_provider.delete_form:
+  route_name:  entity.occapi_provider.delete_form
+  base_route:  entity.occapi_provider.edit_form
+  title: Delete
+  weight: 10
