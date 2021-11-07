@@ -111,12 +111,12 @@ class JsonDataFetcher {
       watchdog_exception('occapi_client', $e->getMessage());
     }
 
-    if ($this->jsonDataProcessor->validate($response)) {
+    // if ($this->jsonDataProcessor->validate($response)) {
       // Extract the data from the Guzzle Stream
       $decoded = json_decode($response, TRUE);
       // Encode the data for persistency
       $json_data = json_encode($decoded);
-    }
+    // }
 
     // Return the data
     return $json_data;
