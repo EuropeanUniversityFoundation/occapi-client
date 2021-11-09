@@ -70,8 +70,9 @@ class OccapiProviderPreviewForm extends EntityForm {
       '#markup' => $header_markup,
     ];
 
-    $form['tabs'] = [
+    $form['primary'] = [
       '#type' => 'vertical_tabs',
+      '#title' => $this->t('Primary data'),
     ];
 
     $hei_tempstore = $provider_id . '.hei.' . $hei_id;
@@ -91,7 +92,7 @@ class OccapiProviderPreviewForm extends EntityForm {
       '#type' => 'details',
       '#title' => $this->t('Institution data'),
       '#tree' => FALSE,
-      '#group' => 'tabs'
+      '#group' => 'primary'
     ];
 
     $form['hei_wrapper']['markup'] = [
@@ -131,7 +132,7 @@ class OccapiProviderPreviewForm extends EntityForm {
         '#type' => 'details',
         '#title' => $this->t('Organizational Unit data'),
         '#tree' => FALSE,
-        '#group' => 'tabs'
+        '#group' => 'primary'
       ];
 
       $form['ounit_wrapper']['markup'] = [
@@ -172,7 +173,7 @@ class OccapiProviderPreviewForm extends EntityForm {
         '#type' => 'details',
         '#title' => $this->t('Programme data'),
         '#tree' => FALSE,
-        '#group' => 'tabs'
+        '#group' => 'primary'
       ];
 
       $form['programme_wrapper']['markup'] = [
@@ -213,7 +214,7 @@ class OccapiProviderPreviewForm extends EntityForm {
         '#type' => 'details',
         '#title' => $this->t('Course data'),
         '#tree' => FALSE,
-        '#group' => 'tabs'
+        '#group' => 'primary'
       ];
 
       $form['course_wrapper']['markup'] = [
@@ -231,6 +232,29 @@ class OccapiProviderPreviewForm extends EntityForm {
         '#markup' => '<pre>' . $course_json . '</pre>',
       ];
     }
+
+    $form['secondary'] = [
+      '#type' => 'vertical_tabs',
+      '#title' => $this->t('Secondary data'),
+    ];
+
+    $form['ounit_programme_wrapper'] = [
+      '#type' => 'details',
+      '#title' => 'placeholder',
+      '#group' => 'secondary'
+    ];
+
+    $form['ounit_course_wrapper'] = [
+      '#type' => 'details',
+      '#title' => 'placeholder',
+      '#group' => 'secondary'
+    ];
+
+    $form['programme_course_wrapper'] = [
+      '#type' => 'details',
+      '#title' => 'placeholder',
+      '#group' => 'secondary'
+    ];
 
     return $form;
   }
