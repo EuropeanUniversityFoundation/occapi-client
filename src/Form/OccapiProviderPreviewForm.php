@@ -108,11 +108,11 @@ class OccapiProviderPreviewForm extends EntityForm {
       '#markup' => '<pre>' . $hei_json . '</pre>',
     ];
 
-    // Organizational Unit data
-    $ounit_table = DataFormatter::NOT_AVAILABLE;
-    $ounit_json = DataFormatter::NOT_AVAILABLE;
-
     if (array_key_exists('ounit', ($hei_data['links']))) {
+      // Organizational Unit data
+      $ounit_table = DataFormatter::NOT_AVAILABLE;
+      $ounit_json = DataFormatter::NOT_AVAILABLE;
+
       $ounit_tempstore = $provider_id . '.ounit';
       $ounit_endpoint = $this->occapiEndpoint . '/ounit';
       $ounit_response = $this->jsonDataFetcher
@@ -122,40 +122,40 @@ class OccapiProviderPreviewForm extends EntityForm {
       $ounit_table = $this->dataFormatter
         ->collectionTable($ounit_data['data']);
       $ounit_json = \json_encode($ounit_data['data'], JSON_PRETTY_PRINT);
+
+      $form['ounit_wrapper'] = [
+        '#type' => 'fieldset',
+        '#title' => $this->t('Organizational Unit data'),
+        '#tree' => FALSE,
+      ];
+
+      $form['ounit_wrapper']['data'] = [
+        '#type' => 'details',
+        '#open' => TRUE,
+        '#title' => self::JSONAPI_DATA,
+      ];
+
+      $form['ounit_wrapper']['data']['markup'] = [
+        '#type' => 'markup',
+        '#markup' => $ounit_table,
+      ];
+
+      $form['ounit_wrapper']['response'] = [
+        '#type' => 'details',
+        '#title' => self::JSONAPI_RESPONSE,
+      ];
+
+      $form['ounit_wrapper']['response']['markup'] = [
+        '#type' => 'markup',
+        '#markup' => '<pre>' . $ounit_json . '</pre>',
+      ];
     }
 
-    $form['ounit_wrapper'] = [
-      '#type' => 'fieldset',
-      '#title' => $this->t('Organizational Unit data'),
-      '#tree' => FALSE,
-    ];
-
-    $form['ounit_wrapper']['data'] = [
-      '#type' => 'details',
-      '#open' => TRUE,
-      '#title' => self::JSONAPI_DATA,
-    ];
-
-    $form['ounit_wrapper']['data']['markup'] = [
-      '#type' => 'markup',
-      '#markup' => $ounit_table,
-    ];
-
-    $form['ounit_wrapper']['response'] = [
-      '#type' => 'details',
-      '#title' => self::JSONAPI_RESPONSE,
-    ];
-
-    $form['ounit_wrapper']['response']['markup'] = [
-      '#type' => 'markup',
-      '#markup' => '<pre>' . $ounit_json . '</pre>',
-    ];
-
-    // Programme data.
-    $programme_table = DataFormatter::NOT_AVAILABLE;
-    $programme_json = DataFormatter::NOT_AVAILABLE;
-
     if (array_key_exists('programme', ($hei_data['links']))) {
+      // Programme data.
+      $programme_table = DataFormatter::NOT_AVAILABLE;
+      $programme_json = DataFormatter::NOT_AVAILABLE;
+
       $programme_tempstore = $provider_id . '.programme';
       $programme_endpoint = $this->occapiEndpoint . '/programme';
       $programme_response = $this->jsonDataFetcher
@@ -165,40 +165,40 @@ class OccapiProviderPreviewForm extends EntityForm {
       $programme_table = $this->dataFormatter
         ->collectionTable($programme_data['data']);
       $programme_json = \json_encode($programme_data['data'], JSON_PRETTY_PRINT);
+
+      $form['programme_wrapper'] = [
+        '#type' => 'fieldset',
+        '#title' => $this->t('Programme data'),
+        '#tree' => FALSE,
+      ];
+
+      $form['programme_wrapper']['data'] = [
+        '#type' => 'details',
+        '#open' => TRUE,
+        '#title' => self::JSONAPI_DATA,
+      ];
+
+      $form['programme_wrapper']['data']['markup'] = [
+        '#type' => 'markup',
+        '#markup' => $programme_table,
+      ];
+
+      $form['programme_wrapper']['response'] = [
+        '#type' => 'details',
+        '#title' => self::JSONAPI_RESPONSE,
+      ];
+
+      $form['programme_wrapper']['response']['markup'] = [
+        '#type' => 'markup',
+        '#markup' => '<pre>' . $programme_json . '</pre>',
+      ];
     }
 
-    $form['programme_wrapper'] = [
-      '#type' => 'fieldset',
-      '#title' => $this->t('Programme data'),
-      '#tree' => FALSE,
-    ];
-
-    $form['programme_wrapper']['data'] = [
-      '#type' => 'details',
-      '#open' => TRUE,
-      '#title' => self::JSONAPI_DATA,
-    ];
-
-    $form['programme_wrapper']['data']['markup'] = [
-      '#type' => 'markup',
-      '#markup' => $programme_table,
-    ];
-
-    $form['programme_wrapper']['response'] = [
-      '#type' => 'details',
-      '#title' => self::JSONAPI_RESPONSE,
-    ];
-
-    $form['programme_wrapper']['response']['markup'] = [
-      '#type' => 'markup',
-      '#markup' => '<pre>' . $programme_json . '</pre>',
-    ];
-
-    // Course data.
-    $course_table = DataFormatter::NOT_AVAILABLE;
-    $course_json = DataFormatter::NOT_AVAILABLE;
-
     if (array_key_exists('course', ($hei_data['links']))) {
+      // Course data.
+      $course_table = DataFormatter::NOT_AVAILABLE;
+      $course_json = DataFormatter::NOT_AVAILABLE;
+
       $course_tempstore = $provider_id . '.course';
       $course_endpoint = $this->occapiEndpoint . '/course';
       $course_response = $this->jsonDataFetcher
@@ -208,34 +208,34 @@ class OccapiProviderPreviewForm extends EntityForm {
       $course_table = $this->dataFormatter
         ->collectionTable($course_data['data']);
       $course_json = \json_encode($course_data['data'], JSON_PRETTY_PRINT);
+
+      $form['course_wrapper'] = [
+        '#type' => 'fieldset',
+        '#title' => $this->t('Course data'),
+        '#tree' => FALSE,
+      ];
+
+      $form['course_wrapper']['data'] = [
+        '#type' => 'details',
+        '#open' => TRUE,
+        '#title' => self::JSONAPI_DATA,
+      ];
+
+      $form['course_wrapper']['data']['markup'] = [
+        '#type' => 'markup',
+        '#markup' => $course_table,
+      ];
+
+      $form['course_wrapper']['response'] = [
+        '#type' => 'details',
+        '#title' => self::JSONAPI_RESPONSE,
+      ];
+
+      $form['course_wrapper']['response']['markup'] = [
+        '#type' => 'markup',
+        '#markup' => '<pre>' . $course_json . '</pre>',
+      ];
     }
-
-    $form['course_wrapper'] = [
-      '#type' => 'fieldset',
-      '#title' => $this->t('Course data'),
-      '#tree' => FALSE,
-    ];
-
-    $form['course_wrapper']['data'] = [
-      '#type' => 'details',
-      '#open' => TRUE,
-      '#title' => self::JSONAPI_DATA,
-    ];
-
-    $form['course_wrapper']['data']['markup'] = [
-      '#type' => 'markup',
-      '#markup' => $course_table,
-    ];
-
-    $form['course_wrapper']['response'] = [
-      '#type' => 'details',
-      '#title' => self::JSONAPI_RESPONSE,
-    ];
-
-    $form['course_wrapper']['response']['markup'] = [
-      '#type' => 'markup',
-      '#markup' => '<pre>' . $course_json . '</pre>',
-    ];
 
     // dpm($this->occapiEndpoint);
 
