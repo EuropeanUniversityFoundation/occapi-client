@@ -80,20 +80,19 @@ class OccapiProviderPreviewForm extends EntityForm {
       ->resourceTable($hei_data);
     $hei_json = \json_encode($hei_data['data'], JSON_PRETTY_PRINT);
 
+    $form['tabs'] = [
+      '#type' => 'vertical_tabs',
+    ];
+
     // Institution data.
     $form['hei_wrapper'] = [
-      '#type' => 'fieldset',
+      '#type' => 'details',
       '#title' => $this->t('Institution data'),
       '#tree' => FALSE,
+      '#group' => 'tabs'
     ];
 
-    $form['hei_wrapper']['data'] = [
-      '#type' => 'details',
-      '#open' => TRUE,
-      '#title' => self::JSONAPI_DATA,
-    ];
-
-    $form['hei_wrapper']['data']['markup'] = [
+    $form['hei_wrapper']['markup'] = [
       '#type' => 'markup',
       '#markup' => $hei_table,
     ];
@@ -124,18 +123,13 @@ class OccapiProviderPreviewForm extends EntityForm {
       $ounit_json = \json_encode($ounit_data['data'], JSON_PRETTY_PRINT);
 
       $form['ounit_wrapper'] = [
-        '#type' => 'fieldset',
+        '#type' => 'details',
         '#title' => $this->t('Organizational Unit data'),
         '#tree' => FALSE,
+        '#group' => 'tabs'
       ];
 
-      $form['ounit_wrapper']['data'] = [
-        '#type' => 'details',
-        '#open' => TRUE,
-        '#title' => self::JSONAPI_DATA,
-      ];
-
-      $form['ounit_wrapper']['data']['markup'] = [
+      $form['ounit_wrapper']['markup'] = [
         '#type' => 'markup',
         '#markup' => $ounit_table,
       ];
@@ -167,18 +161,13 @@ class OccapiProviderPreviewForm extends EntityForm {
       $programme_json = \json_encode($programme_data['data'], JSON_PRETTY_PRINT);
 
       $form['programme_wrapper'] = [
-        '#type' => 'fieldset',
+        '#type' => 'details',
         '#title' => $this->t('Programme data'),
         '#tree' => FALSE,
+        '#group' => 'tabs'
       ];
 
-      $form['programme_wrapper']['data'] = [
-        '#type' => 'details',
-        '#open' => TRUE,
-        '#title' => self::JSONAPI_DATA,
-      ];
-
-      $form['programme_wrapper']['data']['markup'] = [
+      $form['programme_wrapper']['markup'] = [
         '#type' => 'markup',
         '#markup' => $programme_table,
       ];
@@ -210,18 +199,13 @@ class OccapiProviderPreviewForm extends EntityForm {
       $course_json = \json_encode($course_data['data'], JSON_PRETTY_PRINT);
 
       $form['course_wrapper'] = [
-        '#type' => 'fieldset',
+        '#type' => 'details',
         '#title' => $this->t('Course data'),
         '#tree' => FALSE,
+        '#group' => 'tabs'
       ];
 
-      $form['course_wrapper']['data'] = [
-        '#type' => 'details',
-        '#open' => TRUE,
-        '#title' => self::JSONAPI_DATA,
-      ];
-
-      $form['course_wrapper']['data']['markup'] = [
+      $form['course_wrapper']['markup'] = [
         '#type' => 'markup',
         '#markup' => $course_table,
       ];
@@ -237,9 +221,18 @@ class OccapiProviderPreviewForm extends EntityForm {
       ];
     }
 
-    // dpm($this->occapiEndpoint);
+    // dpm($form);
 
     return $form;
+  }
+
+  /**
+   * Returns the action form element for the current entity form.
+   */
+  protected function actionsElement(array $form, FormStateInterface $form_state) {
+    $element = [];
+
+    return $element;
   }
 
   /**
