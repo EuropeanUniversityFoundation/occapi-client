@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Contains ewp_institutions_get.module.
+ * Contains occapi_client.module.
  */
 
 use Drupal\Core\Form\FormStateInterface;

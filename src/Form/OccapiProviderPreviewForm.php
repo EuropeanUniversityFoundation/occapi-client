@@ -64,11 +64,14 @@ class OccapiProviderPreviewForm extends EntityForm {
     $this->occapiEndpoint = $base_url . '/hei/' . $hei_id;
 
     $header_markup = '<h2>' . $this->entity->label() . '</h2>';
-    $header_markup .= '<p>URL: <code>' . $this->occapiEndpoint . '</code></p>';
 
     $form['header'] = [
       '#type' => 'markup',
       '#markup' => $header_markup,
+    ];
+
+    $form['tabs'] = [
+      '#type' => 'vertical_tabs',
     ];
 
     $hei_tempstore = $provider_id . '.hei.' . $hei_id;
@@ -76,13 +79,12 @@ class OccapiProviderPreviewForm extends EntityForm {
       ->load($hei_tempstore, $this->occapiEndpoint);
 
     $hei_data = \json_decode($hei_response, TRUE);
+    $hei_json = \json_encode($hei_data['data'], JSON_PRETTY_PRINT);
     $hei_table = $this->dataFormatter
       ->resourceTable($hei_data);
-    $hei_json = \json_encode($hei_data['data'], JSON_PRETTY_PRINT);
 
-    $form['tabs'] = [
-      '#type' => 'vertical_tabs',
-    ];
+    $hei_markup = '<p><code>GET ' . $this->occapiEndpoint . '</code></p>';
+    $hei_markup .= $hei_table;
 
     // Institution data.
     $form['hei_wrapper'] = [
@@ -94,7 +96,7 @@ class OccapiProviderPreviewForm extends EntityForm {
 
     $form['hei_wrapper']['markup'] = [
       '#type' => 'markup',
-      '#markup' => $hei_table,
+      '#markup' => $hei_markup,
     ];
 
     $form['hei_wrapper']['response'] = [
@@ -118,9 +120,12 @@ class OccapiProviderPreviewForm extends EntityForm {
         ->load($ounit_tempstore, $ounit_endpoint);
 
       $ounit_data = \json_decode($ounit_response, TRUE);
+      $ounit_json = \json_encode($ounit_data['data'], JSON_PRETTY_PRINT);
       $ounit_table = $this->dataFormatter
         ->collectionTable($ounit_data['data']);
-      $ounit_json = \json_encode($ounit_data['data'], JSON_PRETTY_PRINT);
+
+      $ounit_markup = '<p><code>GET ' . $ounit_endpoint . '</code></p>';
+      $ounit_markup .= $ounit_table;
 
       $form['ounit_wrapper'] = [
         '#type' => 'details',
@@ -131,7 +136,7 @@ class OccapiProviderPreviewForm extends EntityForm {
 
       $form['ounit_wrapper']['markup'] = [
         '#type' => 'markup',
-        '#markup' => $ounit_table,
+        '#markup' => $ounit_markup,
       ];
 
       $form['ounit_wrapper']['response'] = [
@@ -156,9 +161,12 @@ class OccapiProviderPreviewForm extends EntityForm {
         ->load($programme_tempstore, $programme_endpoint);
 
       $programme_data = \json_decode($programme_response, TRUE);
+      $programme_json = \json_encode($programme_data['data'], JSON_PRETTY_PRINT);
       $programme_table = $this->dataFormatter
         ->collectionTable($programme_data['data']);
-      $programme_json = \json_encode($programme_data['data'], JSON_PRETTY_PRINT);
+
+      $programme_markup = '<p><code>GET ' . $programme_endpoint . '</code></p>';
+      $programme_markup .= $programme_table;
 
       $form['programme_wrapper'] = [
         '#type' => 'details',
@@ -169,7 +177,7 @@ class OccapiProviderPreviewForm extends EntityForm {
 
       $form['programme_wrapper']['markup'] = [
         '#type' => 'markup',
-        '#markup' => $programme_table,
+        '#markup' => $programme_markup,
       ];
 
       $form['programme_wrapper']['response'] = [
@@ -194,9 +202,12 @@ class OccapiProviderPreviewForm extends EntityForm {
         ->load($course_tempstore, $course_endpoint);
 
       $course_data = \json_decode($course_response, TRUE);
+      $course_json = \json_encode($course_data['data'], JSON_PRETTY_PRINT);
       $course_table = $this->dataFormatter
         ->collectionTable($course_data['data']);
-      $course_json = \json_encode($course_data['data'], JSON_PRETTY_PRINT);
+
+      $course_markup = '<p><code>GET ' . $course_endpoint . '</code></p>';
+      $course_markup .= $course_table;
 
       $form['course_wrapper'] = [
         '#type' => 'details',
@@ -207,7 +218,7 @@ class OccapiProviderPreviewForm extends EntityForm {
 
       $form['course_wrapper']['markup'] = [
         '#type' => 'markup',
-        '#markup' => $course_table,
+        '#markup' => $course_markup,
       ];
 
       $form['course_wrapper']['response'] = [
@@ -221,13 +232,11 @@ class OccapiProviderPreviewForm extends EntityForm {
       ];
     }
 
-    // dpm($form);
-
     return $form;
   }
 
   /**
-   * Returns the action form element for the current entity form.
+   * {@inheritdoc}
    */
   protected function actionsElement(array $form, FormStateInterface $form_state) {
     $element = [];
