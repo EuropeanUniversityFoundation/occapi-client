@@ -48,6 +48,7 @@ class OccapiProviderPreviewForm extends EntityForm {
 
     $form = [];
 
+    $provider_id = $this->entity->id();
     $base_url = $this->entity->get('base_url');
     $hei_id = $this->entity->get('hei_id');
 
@@ -61,7 +62,10 @@ class OccapiProviderPreviewForm extends EntityForm {
       '#markup' => $header_markup,
     ];
 
-    $hei_response = $this->jsonDataFetcher->get($this->occapiEndpoint);
+    $hei_tempstore = $provider_id . '.hei.' . $hei_id;
+    $hei_response = $this->jsonDataFetcher
+      ->load($hei_tempstore, $this->occapiEndpoint);
+
     $hei_data = \json_decode($hei_response, TRUE);
     $hei_data_pretty = \json_encode($hei_data['data'], JSON_PRETTY_PRINT);
 
@@ -86,8 +90,11 @@ class OccapiProviderPreviewForm extends EntityForm {
     $ounit_data_pretty = self::NOT_AVAILABLE;
 
     if (array_key_exists('ounit', ($hei_data['links']))) {
+      $ounit_tempstore = $provider_id . '.ounit';
       $ounit_endpoint = $this->occapiEndpoint . '/ounit';
-      $ounit_response = $this->jsonDataFetcher->get($ounit_endpoint);
+      $ounit_response = $this->jsonDataFetcher
+        ->load($ounit_tempstore, $ounit_endpoint);
+
       $ounit_data = \json_decode($ounit_response, TRUE);
       $ounit_data_pretty = \json_encode($ounit_data['data'], JSON_PRETTY_PRINT);
     }
@@ -112,8 +119,11 @@ class OccapiProviderPreviewForm extends EntityForm {
     $programme_data_pretty = self::NOT_AVAILABLE;
 
     if (array_key_exists('programme', ($hei_data['links']))) {
+      $programme_tempstore = $provider_id . '.programme';
       $programme_endpoint = $this->occapiEndpoint . '/programme';
-      $programme_response = $this->jsonDataFetcher->get($programme_endpoint);
+      $programme_response = $this->jsonDataFetcher
+        ->load($programme_tempstore, $programme_endpoint);
+
       $programme_data = \json_decode($programme_response, TRUE);
       $programme_data_pretty = \json_encode($programme_data['data'], JSON_PRETTY_PRINT);
     }
@@ -138,8 +148,11 @@ class OccapiProviderPreviewForm extends EntityForm {
     $course_data_pretty = self::NOT_AVAILABLE;
 
     if (array_key_exists('course', ($hei_data['links']))) {
+      $course_tempstore = $provider_id . '.course';
       $course_endpoint = $this->occapiEndpoint . '/course';
-      $course_response = $this->jsonDataFetcher->get($course_endpoint);
+      $course_response = $this->jsonDataFetcher
+        ->load($course_tempstore, $course_endpoint);
+
       $course_data = \json_decode($course_response, TRUE);
       $course_data_pretty = \json_encode($course_data['data'], JSON_PRETTY_PRINT);
     }
