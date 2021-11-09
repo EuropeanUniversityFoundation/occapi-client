@@ -85,6 +85,48 @@ class DataFormatter {
   }
 
   /**
+   * Format single resource as HTML table.
+   */
+  public function resourceTable($resource) {
+    $header = [
+      self::TYPE_KEY,
+      self::ID_KEY,
+      self::TITLE_KEY,
+    ];
+
+    $header_len = \count($header);
+
+    foreach ($resource[self::LINKS_KEY] as $key => $link) {
+      $header_text = (\count($header) === $header_len) ? self::LINKS_KEY : '';
+      $header[] = $header_text;
+    }
+
+    $rows = [];
+
+    $row = [
+      $resource[self::DATA_KEY][self::TYPE_KEY],
+      $resource[self::DATA_KEY][self::ID_KEY],
+      $this->extractTitle($resource[self::DATA_KEY][self::ATTR_KEY]),
+    ];
+
+    $options = ['attributes' => ['target' => '_blank']];
+    foreach ($resource[self::LINKS_KEY] as $key => $link) {
+      $uri = $link[self::HREF_KEY];
+      $row[] = Link::fromTextAndUrl($key, Url::fromUri($uri, $options));
+    }
+
+    $rows[] = $row;
+
+    $build['table'] = [
+      '#type' => 'table',
+      '#header' => $header,
+      '#rows' => $rows,
+    ];
+
+    return render($build);
+  }
+
+  /**
    * Extract title from attributes.
    */
   private function extractTitle($attributes) {

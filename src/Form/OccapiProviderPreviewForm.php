@@ -76,13 +76,26 @@ class OccapiProviderPreviewForm extends EntityForm {
       ->load($hei_tempstore, $this->occapiEndpoint);
 
     $hei_data = \json_decode($hei_response, TRUE);
-    $hei_data_pretty = \json_encode($hei_data['data'], JSON_PRETTY_PRINT);
+    $hei_table = $this->dataFormatter
+      ->resourceTable($hei_data);
+    $hei_json = \json_encode($hei_data['data'], JSON_PRETTY_PRINT);
 
     // Institution data.
     $form['hei_wrapper'] = [
       '#type' => 'fieldset',
       '#title' => $this->t('Institution data'),
       '#tree' => FALSE,
+    ];
+
+    $form['hei_wrapper']['data'] = [
+      '#type' => 'details',
+      '#open' => TRUE,
+      '#title' => self::JSONAPI_DATA,
+    ];
+
+    $form['hei_wrapper']['data']['markup'] = [
+      '#type' => 'markup',
+      '#markup' => $hei_table,
     ];
 
     $form['hei_wrapper']['response'] = [
@@ -92,7 +105,7 @@ class OccapiProviderPreviewForm extends EntityForm {
 
     $form['hei_wrapper']['response']['markup'] = [
       '#type' => 'markup',
-      '#markup' => '<pre>' . $hei_data_pretty . '</pre>',
+      '#markup' => '<pre>' . $hei_json . '</pre>',
     ];
 
     // Organizational Unit data
