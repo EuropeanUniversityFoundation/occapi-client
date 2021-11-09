@@ -14,26 +14,28 @@ class DataFormatter {
 
   use StringTranslationTrait;
 
+  const NOT_AVAILABLE   = '<em>n/a</em>';
+
   // JSON:API primary keys.
-  const DATA_KEY  = 'data';
-  const REL_KEY   = 'relationships';
-  const INC_KEY   = 'included';
-  const LINKS_KEY = 'links';
+  const DATA_KEY        = 'data';
+  const REL_KEY         = 'relationships';
+  const INC_KEY         = 'included';
+  const LINKS_KEY       = 'links';
 
   // JSON:API data keys.
-  const TYPE_KEY  = 'type';
-  const ID_KEY    = 'id';
-  const ATTR_KEY  = 'attributes';
+  const TYPE_KEY        = 'type';
+  const ID_KEY          = 'id';
+  const ATTR_KEY        = 'attributes';
 
   // OCCAPI title field.
-  const TITLE_KEY = 'title';
-  const VALUE_KEY = 'string';
-  const LANG_KEY  = 'lang';
-  const LANG_PREF = 'en';
+  const TITLE_KEY       = 'title';
+  const VALUE_KEY       = 'string';
+  const LANG_KEY        = 'lang';
+  const LANG_PREF       = 'en';
 
   // JSON:API link keys.
-  const SELF_KEY  = 'self';
-  const HREF_KEY  = 'href';
+  const SELF_KEY        = 'self';
+  const HREF_KEY        = 'href';
 
   /**
    * Constructs a new JsonDataProcessor.
@@ -86,7 +88,7 @@ class DataFormatter {
    * Extract title from attributes.
    */
   private function extractTitle($attributes) {
-    $title = $this->t('n/a');
+    $title = self::NOT_AVAILABLE;
 
     if (\array_key_exists(self::TITLE_KEY, $attributes)) {
       // Enforce an array of title objects.
