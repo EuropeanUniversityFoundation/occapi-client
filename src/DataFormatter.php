@@ -49,6 +49,39 @@ class DataFormatter {
   }
 
   /**
+   * Gather resource collection titles.
+   */
+  public function collectionTitles($collection) {
+    $titles = [];
+
+    foreach ($collection as $i => $resource) {
+      $id = $resource[self::ID_KEY];
+      $title = $this->extractTitle($resource[self::ATTR_KEY]);
+      $title = ($title === self::NOT_AVAILABLE) ? $id : $title;
+
+      $titles[$id] = $title;
+    }
+
+    return $titles;
+  }
+
+  /**
+   * Gather resource collection links.
+   */
+  public function collectionLinks($collection) {
+    $links = [];
+
+    foreach ($collection as $i => $resource) {
+      $id = $resource[self::ID_KEY];
+      $uri = $resource[self::LINKS_KEY][self::SELF_KEY][self::HREF_KEY];
+
+      $links[$id] = $uri;
+    }
+
+    return $links;
+  }
+
+  /**
    * Format resource collection as HTML table.
    */
   public function collectionTable($collection) {
