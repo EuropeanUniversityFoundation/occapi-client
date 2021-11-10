@@ -275,16 +275,40 @@ class OccapiProviderPreviewForm extends EntityForm {
         $hei_data[DataFormatter::LINKS_KEY]
       )
     ) {
+      $ounit_titles = $this->dataFormatter
+        ->collectionTitles($ounit_data[DataFormatter::DATA_KEY]);
+
+      dpm($ounit_titles);
+
+      $ounit_links = $this->dataFormatter
+        ->collectionLinks($ounit_data[DataFormatter::DATA_KEY]);
+
+      dpm($ounit_links);
+
       $form['ounit_programme_wrapper'] = [
         '#type' => 'details',
         '#title' => $this->t('Programme data per Organizational Unit'),
         '#group' => 'secondary'
       ];
 
+      $form['ounit_programme_wrapper']['select'] = [
+        '#type' => 'select',
+        '#options' => $ounit_titles,
+        '#empty_option' => $this->t('- Select an Organizational Unit -'),
+        '#default_value' => NULL,
+      ];
+
       $form['ounit_course_wrapper'] = [
         '#type' => 'details',
         '#title' => $this->t('Course data per Organizational Unit'),
         '#group' => 'secondary'
+      ];
+
+      $form['ounit_course_wrapper']['select'] = [
+        '#type' => 'select',
+        '#options' => $ounit_titles,
+        '#empty_option' => $this->t('- Select an Organizational Unit -'),
+        '#default_value' => NULL,
       ];
 
     }
@@ -296,10 +320,27 @@ class OccapiProviderPreviewForm extends EntityForm {
         $hei_data[DataFormatter::LINKS_KEY]
       )
     ) {
+      $programme_titles = $this->dataFormatter
+        ->collectionTitles($programme_data[DataFormatter::DATA_KEY]);
+
+      dpm($programme_titles);
+
+      $programme_links = $this->dataFormatter
+        ->collectionLinks($programme_data[DataFormatter::DATA_KEY]);
+
+      dpm($programme_links);
+
       $form['programme_course_wrapper'] = [
         '#type' => 'details',
         '#title' => $this->t('Course data per Programme'),
         '#group' => 'secondary'
+      ];
+
+      $form['programme_course_wrapper']['select'] = [
+        '#type' => 'select',
+        '#options' => $programme_titles,
+        '#empty_option' => $this->t('- Select a Programme -'),
+        '#default_value' => NULL,
       ];
     }
 
