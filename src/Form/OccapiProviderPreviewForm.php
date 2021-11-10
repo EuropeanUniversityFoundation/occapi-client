@@ -15,7 +15,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 class OccapiProviderPreviewForm extends EntityForm {
 
-  const JSONAPI_DATA      = 'JSON:API data';
   const JSONAPI_RESPONSE  = 'JSON:API response';
 
   /**
@@ -60,6 +59,7 @@ class OccapiProviderPreviewForm extends EntityForm {
     $provider_id = $this->entity->id();
     $base_url = $this->entity->get('base_url');
     $hei_id = $this->entity->get('hei_id');
+    $ounit_filter = $this->entity->get('ounit_filter');
 
     $this->occapiEndpoint = $base_url . '/hei/' . $hei_id;
 
@@ -151,7 +151,10 @@ class OccapiProviderPreviewForm extends EntityForm {
       ];
     }
 
-    if (array_key_exists('programme', ($hei_data['links']))) {
+    if (
+      ! $ounit_filter &&
+      (array_key_exists('programme', ($hei_data['links'])))
+    ) {
       // Programme data.
       $programme_table = DataFormatter::NOT_AVAILABLE;
       $programme_json = DataFormatter::NOT_AVAILABLE;
@@ -192,7 +195,10 @@ class OccapiProviderPreviewForm extends EntityForm {
       ];
     }
 
-    if (array_key_exists('course', ($hei_data['links']))) {
+    if (
+      ! $ounit_filter &&
+      array_key_exists('course', ($hei_data['links']))
+    ) {
       // Course data.
       $course_table = DataFormatter::NOT_AVAILABLE;
       $course_json = DataFormatter::NOT_AVAILABLE;
@@ -238,23 +244,28 @@ class OccapiProviderPreviewForm extends EntityForm {
       '#title' => $this->t('Secondary data'),
     ];
 
-    $form['ounit_programme_wrapper'] = [
-      '#type' => 'details',
-      '#title' => 'placeholder',
-      '#group' => 'secondary'
-    ];
+    if (array_key_exists('ounit', ($hei_data['links']))) {
+      $form['ounit_programme_wrapper'] = [
+        '#type' => 'details',
+        '#title' => $this->t('Programme data per Organizational Unit'),
+        '#group' => 'secondary'
+      ];
 
-    $form['ounit_course_wrapper'] = [
-      '#type' => 'details',
-      '#title' => 'placeholder',
-      '#group' => 'secondary'
-    ];
+      $form['ounit_course_wrapper'] = [
+        '#type' => 'details',
+        '#title' => $this->t('Course data per Organizational Unit'),
+        '#group' => 'secondary'
+      ];
 
-    $form['programme_course_wrapper'] = [
-      '#type' => 'details',
-      '#title' => 'placeholder',
-      '#group' => 'secondary'
-    ];
+    }
+
+    if (array_key_exists('programme', ($hei_data['links']))) {
+      $form['programme_course_wrapper'] = [
+        '#type' => 'details',
+        '#title' => $this->t('Course data per Programme'),
+        '#group' => 'secondary'
+      ];
+    }
 
     return $form;
   }
