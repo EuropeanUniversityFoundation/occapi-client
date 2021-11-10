@@ -2,6 +2,8 @@
 
 namespace Drupal\occapi_client\Form;
 
+use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Ajax\HtmlCommand;
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\occapi_client\JsonDataFetcher;
@@ -180,6 +182,7 @@ class OccapiProviderPreviewForm extends EntityForm {
 
       $programme_tempstore = $provider_id . '.' . self::PROGRAMME_KEY;
       $programme_endpoint = $hei_data[DataFormatter::LINKS_KEY][self::PROGRAMME_KEY][DataFormatter::HREF_KEY];
+
       $programme_response = $this->jsonDataFetcher
         ->load($programme_tempstore, $programme_endpoint);
 
@@ -278,12 +281,12 @@ class OccapiProviderPreviewForm extends EntityForm {
       $ounit_titles = $this->dataFormatter
         ->collectionTitles($ounit_data[DataFormatter::DATA_KEY]);
 
-      dpm($ounit_titles);
+      // dpm($ounit_titles);
 
       $ounit_links = $this->dataFormatter
         ->collectionLinks($ounit_data[DataFormatter::DATA_KEY]);
 
-      dpm($ounit_links);
+      // dpm($ounit_links);
 
       $form['ounit_programme_wrapper'] = [
         '#type' => 'details',
@@ -323,12 +326,12 @@ class OccapiProviderPreviewForm extends EntityForm {
       $programme_titles = $this->dataFormatter
         ->collectionTitles($programme_data[DataFormatter::DATA_KEY]);
 
-      dpm($programme_titles);
+      // dpm($programme_titles);
 
       $programme_links = $this->dataFormatter
         ->collectionLinks($programme_data[DataFormatter::DATA_KEY]);
 
-      dpm($programme_links);
+      // dpm($programme_links);
 
       $form['programme_course_wrapper'] = [
         '#type' => 'details',
@@ -336,12 +339,41 @@ class OccapiProviderPreviewForm extends EntityForm {
         '#group' => 'secondary'
       ];
 
-      $form['programme_course_wrapper']['select'] = [
+      $form['programme_course_wrapper']['programme_course_links'] = [
+        '#type' => 'value',
+        '#value' => $programme_links,
+      ];
+
+      $form['programme_course_wrapper']['programme_course_select'] = [
         '#type' => 'select',
         '#options' => $programme_titles,
         '#empty_option' => $this->t('- Select a Programme -'),
         '#default_value' => NULL,
+        '#attributes' => [
+          'name' => 'programme_course_select',
+        ],
+        '#ajax' => [
+          'callback' => '::programmeCourseTable',
+          'disable-refocus' => TRUE,
+          'event' => 'change',
+          'wrapper' => 'programme_course_table',
+        ],
       ];
+
+      $form['programme_course_wrapper']['programme_course_table'] = [
+        '#type' => 'markup',
+        '#markup' => '<div id="programmeCourseTable"></div>',
+      ];
+
+      // $form['programme_course_wrapper']['response'] = [
+      //   '#type' => 'details',
+      //   '#title' => self::JSONAPI_RESPONSE,
+      // ];
+      //
+      // $form['programme_course_wrapper']['response']['programme_course_json'] = [
+      //   '#type' => 'markup',
+      //   '#markup' => '<div id="programmeCourseJson"></div>',
+      // ];
     }
 
     return $form;
@@ -363,6 +395,74 @@ class OccapiProviderPreviewForm extends EntityForm {
     $result = parent::save($form, $form_state);
 
     return $result;
+  }
+
+  /**
+  * AJAX callback to generate and display a programme course table.
+  */
+  public function programmeCourseTable(array $form, FormStateInterface $form_state) {
+    $markup = '';
+
+    $programme_id = $form_state->getValue('programme_course_select');
+    \Drupal::logger('occapi_client')->notice($programme_id);
+
+    if ($programme_id) {
+      // Programme resource data.
+      $programme_links = $form_state->getValue('programme_course_links');
+      $programme_uri = $programme_links[$programme_id];
+
+      $programme_tempstore = $this->entity->id() . '.' . self::PROGRAMME_KEY;
+      $programme_tempstore .= '.' . $programme_id;
+
+      $programme_response = $this->jsonDataFetcher
+        ->load($programme_tempstore, $programme_uri);
+
+      $programme_data = \json_decode($programme_response, TRUE);
+      // $programme_json = \json_encode(
+      //   $programme_data[DataFormatter::DATA_KEY],
+      //   JSON_PRETTY_PRINT
+      // );
+      $programme_table = $this->dataFormatter
+        ->resourceTable($programme_data);
+
+      $programme_markup = '<p><code>GET ' . $programme_uri . '</code></p>';
+      $programme_markup .= $programme_table;
+
+      $markup .= $programme_markup;
+
+      if (
+        array_key_exists(
+          self::COURSE_KEY,
+          $programme_data[DataFormatter::LINKS_KEY]
+        )
+      ) {
+        // Course collection data.
+        $course_tempstore = $this->entity->id() . '.' . self::PROGRAMME_KEY;
+        $course_tempstore .= '.' . $programme_id . '.' . self::COURSE_KEY;
+
+        $course_endpoint = $programme_data[DataFormatter::LINKS_KEY][self::COURSE_KEY][DataFormatter::HREF_KEY];
+        $course_response = $this->jsonDataFetcher
+          ->load($course_tempstore, $course_endpoint);
+
+        $course_data = \json_decode($course_response, TRUE);
+        // $course_json = \json_encode(
+        //   $course_data[DataFormatter::DATA_KEY],
+        //   JSON_PRETTY_PRINT
+        // );
+        $course_table = $this->dataFormatter
+          ->collectionTable($course_data[DataFormatter::DATA_KEY]);
+
+        $course_markup = '<p><code>GET ' . $course_endpoint . '</code></p>';
+        $course_markup .= $course_table;
+
+        $markup .= '<hr />' . $course_markup;
+      }
+    }
+
+    $ajax_response = new AjaxResponse();
+    $ajax_response
+      ->addCommand(new HtmlCommand('#programmeCourseTable', $markup));
+    return $ajax_response;
   }
 
 }
