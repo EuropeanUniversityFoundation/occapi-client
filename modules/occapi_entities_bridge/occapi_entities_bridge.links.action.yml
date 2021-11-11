@@ -1,0 +1,10 @@
+occapi_entities_bridge.import:
+  route_name: occapi_entities_bridge.import
+  title: 'Import OCCAPI entities'
+  appears_on:
+    - entity.occapi_provider.collection
+    - entity.occapi_provider.preview_form
+    - entity.course.collection
+    - entity.course.settings
+    - entity.programme.collection
+    - entity.programme.settings

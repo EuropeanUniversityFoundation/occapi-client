@@ -1,0 +1,11 @@
+name: OCCAPI entities bridge
+type: module
+description: 'Connects the OCCAPI client with the OCCAPI entities module.'
+package: OCCAPI
+core_version_requirement: ^8 || ^9
+configure: occapi_entities_bridge.settings
+dependencies:
+  - occapi_client:occapi_client
+  - occapi_entities:occapi_entities
+  - ewp_institutions:ewp_institutions
+  - ewp_institutions:ewp_institutions_get

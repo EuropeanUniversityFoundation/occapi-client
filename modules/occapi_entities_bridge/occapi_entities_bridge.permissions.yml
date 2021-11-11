@@ -1,0 +1,3 @@
+bypass import occapi entities:
+  title: 'Bypass Import OCCAPI entities form'
+  restrict access: true
