@@ -77,11 +77,13 @@ class OccapiProviderPreviewForm extends EntityForm {
       '#markup' => $header_markup,
     ];
 
+    // Primary tabs for automatic data requests.
     $form['primary'] = [
       '#type' => 'vertical_tabs',
       '#title' => $this->t('Primary data'),
     ];
 
+    // Prepare Institution data.
     $hei_tempstore = $provider_id . '.' . self::HEI_KEY . '.' . $hei_id;
     $hei_response = $this->jsonDataFetcher
       ->load($hei_tempstore, $this->occapiEndpoint);
@@ -97,7 +99,7 @@ class OccapiProviderPreviewForm extends EntityForm {
     $hei_markup = '<p><code>GET ' . $this->occapiEndpoint . '</code></p>';
     $hei_markup .= $hei_table;
 
-    // Institution data.
+    // Display Institution data.
     $form['hei_wrapper'] = [
       '#type' => 'details',
       '#title' => $this->t('Institution data'),
@@ -126,7 +128,7 @@ class OccapiProviderPreviewForm extends EntityForm {
         $hei_data[DataFormatter::LINKS_KEY]
       )
     ) {
-      // Organizational Unit data
+      // Prepare Organizational Unit data
       $ounit_table = DataFormatter::NOT_AVAILABLE;
       $ounit_json = DataFormatter::NOT_AVAILABLE;
 
@@ -146,6 +148,7 @@ class OccapiProviderPreviewForm extends EntityForm {
       $ounit_markup = '<p><code>GET ' . $ounit_endpoint . '</code></p>';
       $ounit_markup .= $ounit_table;
 
+      // Display Organizational Unit data
       $form['ounit_wrapper'] = [
         '#type' => 'details',
         '#title' => $this->t('Organizational Unit data'),
@@ -176,7 +179,7 @@ class OccapiProviderPreviewForm extends EntityForm {
         $hei_data[DataFormatter::LINKS_KEY]
       )
     ) {
-      // Programme data.
+      // Prepare Programme data.
       $programme_table = DataFormatter::NOT_AVAILABLE;
       $programme_json = DataFormatter::NOT_AVAILABLE;
 
@@ -197,6 +200,7 @@ class OccapiProviderPreviewForm extends EntityForm {
       $programme_markup = '<p><code>GET ' . $programme_endpoint . '</code></p>';
       $programme_markup .= $programme_table;
 
+      // Display Programme data
       $form['programme_wrapper'] = [
         '#type' => 'details',
         '#title' => $this->t('Programme data'),
@@ -224,7 +228,7 @@ class OccapiProviderPreviewForm extends EntityForm {
       ! $ounit_filter &&
       array_key_exists(self::COURSE_KEY, ($hei_data[DataFormatter::LINKS_KEY]))
     ) {
-      // Course data.
+      // Prepare Course data.
       $course_table = DataFormatter::NOT_AVAILABLE;
       $course_json = DataFormatter::NOT_AVAILABLE;
 
@@ -244,6 +248,7 @@ class OccapiProviderPreviewForm extends EntityForm {
       $course_markup = '<p><code>GET ' . $course_endpoint . '</code></p>';
       $course_markup .= $course_table;
 
+      // Display Course data.
       $form['course_wrapper'] = [
         '#type' => 'details',
         '#title' => $this->t('Course data'),
@@ -267,6 +272,7 @@ class OccapiProviderPreviewForm extends EntityForm {
       ];
     }
 
+    // Secondary tabs for data requests based on select options.
     $form['secondary'] = [
       '#type' => 'vertical_tabs',
       '#title' => $this->t('Secondary data'),
@@ -281,39 +287,73 @@ class OccapiProviderPreviewForm extends EntityForm {
       $ounit_titles = $this->dataFormatter
         ->collectionTitles($ounit_data[DataFormatter::DATA_KEY]);
 
-      // dpm($ounit_titles);
-
       $ounit_links = $this->dataFormatter
         ->collectionLinks($ounit_data[DataFormatter::DATA_KEY]);
 
-      // dpm($ounit_links);
-
+      // Select ounit to display programme data.
       $form['ounit_programme_wrapper'] = [
         '#type' => 'details',
         '#title' => $this->t('Programme data per Organizational Unit'),
+        '#tree' => FALSE,
         '#group' => 'secondary'
       ];
 
-      $form['ounit_programme_wrapper']['select'] = [
+      $form['ounit_programme_wrapper']['ounit_programme_links'] = [
+        '#type' => 'value',
+        '#value' => $ounit_links,
+      ];
+
+      $form['ounit_programme_wrapper']['ounit_programme_select'] = [
         '#type' => 'select',
         '#options' => $ounit_titles,
         '#empty_option' => $this->t('- Select an Organizational Unit -'),
         '#default_value' => NULL,
+        '#ajax' => [
+          'callback' => '::ounitProgrammeTable',
+          'disable-refocus' => TRUE,
+          'event' => 'change',
+          'wrapper' => 'ounit_programme_table',
+        ],
       ];
 
+      $form['ounit_programme_wrapper']['ounit_programme_table'] = [
+        '#type' => 'markup',
+        '#markup' => '<div id="ounitProgrammeTable"></div>',
+      ];
+
+      // Select ounit to display course data.
       $form['ounit_course_wrapper'] = [
         '#type' => 'details',
         '#title' => $this->t('Course data per Organizational Unit'),
+        '#tree' => FALSE,
         '#group' => 'secondary'
       ];
 
-      $form['ounit_course_wrapper']['select'] = [
+      $form['ounit_course_wrapper']['ounit_course_links'] = [
+        '#type' => 'value',
+        '#value' => $ounit_links,
+      ];
+
+      $form['ounit_course_wrapper']['ounit_course_select'] = [
         '#type' => 'select',
         '#options' => $ounit_titles,
         '#empty_option' => $this->t('- Select an Organizational Unit -'),
         '#default_value' => NULL,
+        '#attributes' => [
+          'name' => 'ounit_course_select',
+        ],
+        '#ajax' => [
+          'callback' => '::ounitCourseTable',
+          'disable-refocus' => TRUE,
+          'event' => 'change',
+          'wrapper' => 'ounit_course_table',
+        ],
       ];
 
+      $form['ounit_course_wrapper']['ounit_course_table'] = [
+        '#type' => 'markup',
+        '#markup' => '<div id="ounitCourseTable"></div>',
+      ];
     }
 
     if (
@@ -326,16 +366,14 @@ class OccapiProviderPreviewForm extends EntityForm {
       $programme_titles = $this->dataFormatter
         ->collectionTitles($programme_data[DataFormatter::DATA_KEY]);
 
-      // dpm($programme_titles);
-
       $programme_links = $this->dataFormatter
         ->collectionLinks($programme_data[DataFormatter::DATA_KEY]);
 
-      // dpm($programme_links);
-
+      // Select programme to display course data.
       $form['programme_course_wrapper'] = [
         '#type' => 'details',
         '#title' => $this->t('Course data per Programme'),
+        '#tree' => FALSE,
         '#group' => 'secondary'
       ];
 
@@ -364,16 +402,6 @@ class OccapiProviderPreviewForm extends EntityForm {
         '#type' => 'markup',
         '#markup' => '<div id="programmeCourseTable"></div>',
       ];
-
-      // $form['programme_course_wrapper']['response'] = [
-      //   '#type' => 'details',
-      //   '#title' => self::JSONAPI_RESPONSE,
-      // ];
-      //
-      // $form['programme_course_wrapper']['response']['programme_course_json'] = [
-      //   '#type' => 'markup',
-      //   '#markup' => '<div id="programmeCourseJson"></div>',
-      // ];
     }
 
     return $form;
@@ -398,7 +426,127 @@ class OccapiProviderPreviewForm extends EntityForm {
   }
 
   /**
-  * AJAX callback to generate and display a programme course table.
+  * AJAX callback to generate and display a ounit + programme table.
+  */
+  public function ounitProgrammeTable(array $form, FormStateInterface $form_state) {
+    $markup = '';
+
+    $ounit_id = $form_state->getValue('ounit_programme_select');
+    \Drupal::logger('occapi_client')->notice($ounit_id);
+
+    if ($ounit_id) {
+      // OUnit resource data.
+      $ounit_links = $form_state->getValue('ounit_programme_links');
+      $ounit_uri = $ounit_links[$ounit_id];
+
+      $ounit_tempstore = $this->entity->id() . '.' . self::OUNIT_KEY;
+      $ounit_tempstore .= '.' . $ounit_id;
+
+      $ounit_response = $this->jsonDataFetcher
+        ->load($ounit_tempstore, $ounit_uri);
+
+      $ounit_data = \json_decode($ounit_response, TRUE);
+      $ounit_table = $this->dataFormatter
+        ->resourceTable($ounit_data);
+
+      $ounit_markup = '<p><code>GET ' . $ounit_uri . '</code></p>';
+      $ounit_markup .= $ounit_table;
+
+      $markup .= $ounit_markup;
+
+      if (
+        array_key_exists(
+          self::PROGRAMME_KEY,
+          $ounit_data[DataFormatter::LINKS_KEY]
+        )
+      ) {
+        // Programme collection data.
+        $programme_tempstore = $this->entity->id() . '.' . self::OUNIT_KEY;
+        $programme_tempstore .= '.' . $ounit_id . '.' . self::PROGRAMME_KEY;
+
+        $programme_endpoint = $ounit_data[DataFormatter::LINKS_KEY][self::PROGRAMME_KEY][DataFormatter::HREF_KEY];
+        $programme_response = $this->jsonDataFetcher
+          ->load($programme_tempstore, $programme_endpoint);
+
+        $programme_data = \json_decode($programme_response, TRUE);
+        $programme_table = $this->dataFormatter
+          ->collectionTable($programme_data[DataFormatter::DATA_KEY]);
+
+        $programme_markup = '<p><code>GET ' . $programme_endpoint . '</code></p>';
+        $programme_markup .= $programme_table;
+
+        $markup .= '<hr />' . $programme_markup;
+      }
+    }
+
+    $ajax_response = new AjaxResponse();
+    $ajax_response
+      ->addCommand(new HtmlCommand('#ounitProgrammeTable', $markup));
+    return $ajax_response;
+  }
+
+  /**
+  * AJAX callback to generate and display a ounit + course table.
+  */
+  public function ounitCourseTable(array $form, FormStateInterface $form_state) {
+    $markup = '';
+
+    $ounit_id = $form_state->getValue('ounit_course_select');
+    \Drupal::logger('occapi_client')->notice($ounit_id);
+
+    if ($ounit_id) {
+      // OUnit resource data.
+      $ounit_links = $form_state->getValue('ounit_course_links');
+      $ounit_uri = $ounit_links[$ounit_id];
+
+      $ounit_tempstore = $this->entity->id() . '.' . self::OUNIT_KEY;
+      $ounit_tempstore .= '.' . $ounit_id;
+
+      $ounit_response = $this->jsonDataFetcher
+        ->load($ounit_tempstore, $ounit_uri);
+
+      $ounit_data = \json_decode($ounit_response, TRUE);
+      $ounit_table = $this->dataFormatter
+        ->resourceTable($ounit_data);
+
+      $ounit_markup = '<p><code>GET ' . $ounit_uri . '</code></p>';
+      $ounit_markup .= $ounit_table;
+
+      $markup .= $ounit_markup;
+
+      if (
+        array_key_exists(
+          self::COURSE_KEY,
+          $ounit_data[DataFormatter::LINKS_KEY]
+        )
+      ) {
+        // Course collection data.
+        $course_tempstore = $this->entity->id() . '.' . self::OUNIT_KEY;
+        $course_tempstore .= '.' . $ounit_id . '.' . self::COURSE_KEY;
+
+        $course_endpoint = $ounit_data[DataFormatter::LINKS_KEY][self::COURSE_KEY][DataFormatter::HREF_KEY];
+        $course_response = $this->jsonDataFetcher
+          ->load($course_tempstore, $course_endpoint);
+
+        $course_data = \json_decode($course_response, TRUE);
+        $course_table = $this->dataFormatter
+          ->collectionTable($course_data[DataFormatter::DATA_KEY]);
+
+        $course_markup = '<p><code>GET ' . $course_endpoint . '</code></p>';
+        $course_markup .= $course_table;
+
+        $markup .= '<hr />' . $course_markup;
+      }
+    }
+
+    $ajax_response = new AjaxResponse();
+    $ajax_response
+      ->addCommand(new HtmlCommand('#ounitCourseTable', $markup));
+    return $ajax_response;
+  }
+
+  /**
+  * AJAX callback to generate and display a programme + course table.
   */
   public function programmeCourseTable(array $form, FormStateInterface $form_state) {
     $markup = '';
@@ -418,10 +566,6 @@ class OccapiProviderPreviewForm extends EntityForm {
         ->load($programme_tempstore, $programme_uri);
 
       $programme_data = \json_decode($programme_response, TRUE);
-      // $programme_json = \json_encode(
-      //   $programme_data[DataFormatter::DATA_KEY],
-      //   JSON_PRETTY_PRINT
-      // );
       $programme_table = $this->dataFormatter
         ->resourceTable($programme_data);
 
@@ -445,10 +589,6 @@ class OccapiProviderPreviewForm extends EntityForm {
           ->load($course_tempstore, $course_endpoint);
 
         $course_data = \json_decode($course_response, TRUE);
-        // $course_json = \json_encode(
-        //   $course_data[DataFormatter::DATA_KEY],
-        //   JSON_PRETTY_PRINT
-        // );
         $course_table = $this->dataFormatter
           ->collectionTable($course_data[DataFormatter::DATA_KEY]);
 
