@@ -1,0 +1,5 @@
+services:
+  occapi_entities_bridge.route_subscriber:
+    class: Drupal\occapi_entities_bridge\Routing\RouteSubscriber
+    tags:
+      - { name: event_subscriber }

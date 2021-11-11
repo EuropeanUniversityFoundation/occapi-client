@@ -38,7 +38,7 @@ class DataFormatter {
   const HREF_KEY        = 'href';
 
   /**
-   * Constructs a new JsonDataProcessor.
+   * Constructs a new DataFormatter.
    *
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
@@ -46,6 +46,7 @@ class DataFormatter {
   public function __construct(
     TranslationInterface $string_translation
   ) {
+    $this->stringTranslation = $string_translation;
   }
 
   /**

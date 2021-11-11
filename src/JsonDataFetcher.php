@@ -68,10 +68,11 @@ class JsonDataFetcher {
     SharedTempStoreFactory $temp_store_factory,
     TranslationInterface $string_translation
   ) {
-    $this->httpClient = $http_client;
-    $this->jsonDataProcessor = $json_data_processor;
-    $this->logger = $logger_factory->get('occapi_client');
-    $this->tempStore = $temp_store_factory->get('occapi_client');
+    $this->httpClient         = $http_client;
+    $this->jsonDataProcessor  = $json_data_processor;
+    $this->logger             = $logger_factory->get('occapi_client');
+    $this->tempStore          = $temp_store_factory->get('occapi_client');
+    $this->stringTranslation  = $string_translation;
   }
 
   /**

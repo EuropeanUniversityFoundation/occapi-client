@@ -6,6 +6,7 @@ use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\occapi_client\DataFormatter;
 use Drupal\occapi_client\JsonDataFetcher;
+use Drupal\occapi_client\OccapiProviderManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -42,6 +43,13 @@ class OccapiImportForm extends FormBase {
   protected $logger;
 
   /**
+   * OCCAPI provider manager service.
+   *
+   * @var \Drupal\occapi_client\OccapiProviderManager
+   */
+  protected $providerManager;
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
@@ -51,6 +59,7 @@ class OccapiImportForm extends FormBase {
     $instance->dataFormatter = $container->get('occapi_client.format');
     $instance->loggerFactory = $container->get('logger.factory');
     $instance->logger = $instance->loggerFactory->get('occapi_entities_bridge');
+    $instance->providerManager = $container->get('occapi_client.manager');
     return $instance;
   }
 
