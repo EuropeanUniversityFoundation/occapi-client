@@ -1,0 +1,7 @@
+occapi_entities_bridge.settings:
+  type: config_object
+  label: 'OCCAPI entities bridge settings'
+  mapping:
+    index_endpoint:
+      type: text
+      label: 'Example'

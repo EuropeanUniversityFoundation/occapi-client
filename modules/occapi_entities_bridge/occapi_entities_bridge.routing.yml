@@ -1,15 +1,23 @@
 occapi_entities_bridge.settings:
   path: '/admin/config/services/occapi/occapi_entities'
   defaults:
-    _controller: '\Drupal\system\Controller\SystemController::systemAdminMenuBlockPage'
-    _title: 'OCCAPI entities bridge'
+    _form: 'Drupal\occapi_entities_bridge\Form\SettingsForm'
+    _title: 'OCCAPI entities bridge settings'
   requirements:
     _permission: 'administer occapi_provider'
 
 occapi_entities_bridge.import:
   path: '/admin/structure/occapi/import'
   defaults:
-    _controller: '\Drupal\system\Controller\SystemController::systemAdminMenuBlockPage'
+    _form: 'Drupal\occapi_entities_bridge\Form\OccapiImportForm'
     _title: 'Import OCCAPI entities'
   requirements:
     _permission: 'administer occapi_provider'
+
+occapi_entities_bridge.import_confirm:
+  path: '/admin/structure/occapi/import/confirm'
+  defaults:
+    _form: 'Drupal\occapi_entities_bridge\Form\OccapiImportConfirmForm'
+    _title: 'Confirm OCCAPI entities import'
+  requirements:
+    _permission: 'administer course.administer programme'
