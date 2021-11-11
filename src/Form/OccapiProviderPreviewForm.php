@@ -6,8 +6,8 @@ use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\HtmlCommand;
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\occapi_client\JsonDataFetcher;
 use Drupal\occapi_client\DataFormatter;
+use Drupal\occapi_client\JsonDataFetcher;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -46,6 +46,13 @@ class OccapiProviderPreviewForm extends EntityForm {
   protected $dataFormatter;
 
   /**
+   * The logger service.
+   *
+   * @var \Psr\Log\LoggerInterface
+   */
+  protected $logger;
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
@@ -53,6 +60,8 @@ class OccapiProviderPreviewForm extends EntityForm {
     $instance = parent::create($container);
     $instance->jsonDataFetcher = $container->get('occapi_client.fetch');
     $instance->dataFormatter = $container->get('occapi_client.format');
+    $instance->loggerFactory = $container->get('logger.factory');
+    $instance->logger = $instance->loggerFactory->get('occapi_client');
     return $instance;
   }
 
@@ -60,7 +69,6 @@ class OccapiProviderPreviewForm extends EntityForm {
    * {@inheritdoc}
    */
   public function form(array $form, FormStateInterface $form_state) {
-
     $form = [];
 
     $provider_id = $this->entity->id();
@@ -128,7 +136,7 @@ class OccapiProviderPreviewForm extends EntityForm {
         $hei_data[DataFormatter::LINKS_KEY]
       )
     ) {
-      // Prepare Organizational Unit data
+      // Prepare Organizational Unit data.
       $ounit_table = DataFormatter::NOT_AVAILABLE;
       $ounit_json = DataFormatter::NOT_AVAILABLE;
 
@@ -148,7 +156,7 @@ class OccapiProviderPreviewForm extends EntityForm {
       $ounit_markup = '<p><code>GET ' . $ounit_endpoint . '</code></p>';
       $ounit_markup .= $ounit_table;
 
-      // Display Organizational Unit data
+      // Display Organizational Unit data.
       $form['ounit_wrapper'] = [
         '#type' => 'details',
         '#title' => $this->t('Organizational Unit data'),
@@ -200,7 +208,7 @@ class OccapiProviderPreviewForm extends EntityForm {
       $programme_markup = '<p><code>GET ' . $programme_endpoint . '</code></p>';
       $programme_markup .= $programme_table;
 
-      // Display Programme data
+      // Display Programme data.
       $form['programme_wrapper'] = [
         '#type' => 'details',
         '#title' => $this->t('Programme data'),
@@ -432,7 +440,6 @@ class OccapiProviderPreviewForm extends EntityForm {
     $markup = '';
 
     $ounit_id = $form_state->getValue('ounit_programme_select');
-    \Drupal::logger('occapi_client')->notice($ounit_id);
 
     if ($ounit_id) {
       // OUnit resource data.
@@ -441,6 +448,9 @@ class OccapiProviderPreviewForm extends EntityForm {
 
       $ounit_tempstore = $this->entity->id() . '.' . self::OUNIT_KEY;
       $ounit_tempstore .= '.' . $ounit_id;
+
+      $message = $this->t('Retrieving ounit with ID: ') . $ounit_id;
+      $this->logger->notice($message);
 
       $ounit_response = $this->jsonDataFetcher
         ->load($ounit_tempstore, $ounit_uri);
@@ -465,6 +475,7 @@ class OccapiProviderPreviewForm extends EntityForm {
         $programme_tempstore .= '.' . $ounit_id . '.' . self::PROGRAMME_KEY;
 
         $programme_endpoint = $ounit_data[DataFormatter::LINKS_KEY][self::PROGRAMME_KEY][DataFormatter::HREF_KEY];
+
         $programme_response = $this->jsonDataFetcher
           ->load($programme_tempstore, $programme_endpoint);
 
@@ -492,7 +503,6 @@ class OccapiProviderPreviewForm extends EntityForm {
     $markup = '';
 
     $ounit_id = $form_state->getValue('ounit_course_select');
-    \Drupal::logger('occapi_client')->notice($ounit_id);
 
     if ($ounit_id) {
       // OUnit resource data.
@@ -501,6 +511,9 @@ class OccapiProviderPreviewForm extends EntityForm {
 
       $ounit_tempstore = $this->entity->id() . '.' . self::OUNIT_KEY;
       $ounit_tempstore .= '.' . $ounit_id;
+
+      $message = $this->t('Retrieving ounit with ID: ') . $ounit_id;
+      $this->logger->notice($message);
 
       $ounit_response = $this->jsonDataFetcher
         ->load($ounit_tempstore, $ounit_uri);
@@ -552,7 +565,6 @@ class OccapiProviderPreviewForm extends EntityForm {
     $markup = '';
 
     $programme_id = $form_state->getValue('programme_course_select');
-    \Drupal::logger('occapi_client')->notice($programme_id);
 
     if ($programme_id) {
       // Programme resource data.
@@ -561,6 +573,9 @@ class OccapiProviderPreviewForm extends EntityForm {
 
       $programme_tempstore = $this->entity->id() . '.' . self::PROGRAMME_KEY;
       $programme_tempstore .= '.' . $programme_id;
+
+      $message = $this->t('Retrieving programme with ID: ') . $programme_id;
+      $this->logger->notice($message);
 
       $programme_response = $this->jsonDataFetcher
         ->load($programme_tempstore, $programme_uri);
