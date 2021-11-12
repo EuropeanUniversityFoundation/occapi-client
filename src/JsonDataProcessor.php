@@ -13,17 +13,29 @@ class JsonDataProcessor {
 
   use StringTranslationTrait;
 
-  // JSON data keys
-  const DATA_KEY = 'data';
-  const TYPE_KEY = 'type';
-  const ID_KEY = 'id';
-  const ATTR_KEY = 'attributes';
-  const TITLE_KEY = 'title';
-  const LABEL_KEY = 'label';
+  // JSON:API primary keys.
+  const DATA_KEY  = 'data';
+  const INC_KEY   = 'included';
   const LINKS_KEY = 'links';
-  const HREF_KEY = 'href';
+
+  // JSON:API data keys.
+  const TYPE_KEY  = 'type';
+  const ID_KEY    = 'id';
+  const ATTR_KEY  = 'attributes';
+  const REL_KEY   = 'relationships';
+
+  // OCCAPI title field.
+  const TITLE_KEY = 'title';
+  const VALUE_KEY = 'string';
+  const LANG_KEY  = 'lang';
+  const LANG_PREF = 'en';
+
+  // JSON:API link keys.
+  const SELF_KEY  = 'self';
+  const HREF_KEY  = 'href';
+
   // Drupal array keys
-  const VALUE_KEY = 'value';
+  const LABEL_KEY = 'label';
 
   /**
    * The logger service.
@@ -44,8 +56,49 @@ class JsonDataProcessor {
     LoggerChannelFactoryInterface $logger_factory,
     TranslationInterface $string_translation
   ) {
-    $this->logger = $logger_factory->get('occapi_client');
+    $this->logger             = $logger_factory->get('occapi_client');
+    $this->stringTranslation  = $string_translation;
   }
+
+  /**
+   * Extract title from attributes.
+   */
+  public function extractTitle($attributes) {
+    $title = '';
+
+    if (\array_key_exists(self::TITLE_KEY, $attributes)) {
+      // Enforce an array of title objects.
+      if (! \array_key_exists(0, $attributes[self::TITLE_KEY])) {
+        $title_array = [$attributes[self::TITLE_KEY]];
+      } else {
+        $title_array = $attributes[self::TITLE_KEY];
+      }
+
+      // Sort the title objects by prefered lang value.
+      $title_primary = [];
+      $title_fallback = [];
+      $title_ordered = [];
+
+      foreach ($title_array as $i => $arr) {
+        if (
+          \array_key_exists(self::LANG_KEY, $arr) &&
+          $arr[self::LANG_KEY] === self::LANG_PREF
+        ) {
+          \array_push($title_primary, $arr);
+        } else {
+          \array_push($title_fallback, $arr);
+        }
+        $title_ordered = \array_merge($title_primary, $title_fallback);
+      }
+
+      if (count($title_ordered) > 0) {
+        $title = $title_ordered[0][self::VALUE_KEY];
+      }
+    }
+
+    return $title;
+  }
+
 
   /**
    * Extract attributes for a single key in JSON data
