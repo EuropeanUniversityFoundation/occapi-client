@@ -124,4 +124,19 @@ class OccapiProviderManager {
 
     return $providers;
   }
+
+  /**
+   * Get an OCCAPI provider by ID.
+   */
+  public function getProvider($id) {
+    $providers = $this->entityTypeManager
+      ->getStorage(self::ENTITY_TYPE)
+      ->loadByProperties(['id' => $id]);
+
+    foreach ($providers as $id => $object) {
+      $provider = $object;
+    }
+
+    return $provider;
+  }
 }

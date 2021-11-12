@@ -2,6 +2,8 @@
 
 namespace Drupal\occapi_entities_bridge\Form;
 
+use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Ajax\HtmlCommand;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\occapi_client\DataFormatter;
@@ -15,11 +17,46 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class OccapiImportForm extends FormBase {
 
   /**
-   * OCCAPI programme to import.
+   * OCCAPI provider.
    *
-   * @var string
+   * @var \Drupal\occapi_client\Entity\OccapiProvider
    */
-  protected $programme;
+  protected $provider;
+
+  /**
+   * OCCAPI provider ounit_filter.
+   *
+   * @var boolean
+   */
+  protected $ounitFilter = FALSE;
+
+  /**
+   * OCCAPI Institution data.
+   *
+   * @var array
+   */
+  protected $heiData;
+
+  /**
+   * OCCAPI OUnit data.
+   *
+   * @var array
+   */
+  protected $ounitData;
+
+  /**
+   * OCCAPI Programme data.
+   *
+   * @var array
+   */
+  protected $programmeData;
+
+  /**
+   * OCCAPI Course data.
+   *
+   * @var array
+   */
+  protected $courseData;
 
   /**
    * Data formatter service.
@@ -82,8 +119,13 @@ class OccapiImportForm extends FormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
+    $this->logger->notice('Building form...');
 
-    // dpm($this);
+    if ($this->provider) {
+      $this->ounitFilter = $this->provider->get('ounit_filter');
+    } else {
+      $this->ounitFilter = FALSE;
+    }
 
     // Load all available OCCAPI providers.
     $providers = $this->providerManager
@@ -104,9 +146,30 @@ class OccapiImportForm extends FormBase {
       '#options' => $provider_titles,
       '#empty_option' => $this->t('- Select a provider -'),
       '#default_value' => NULL,
+      '#ajax' => [
+        'callback' => '::heiMarkup',
+        'disable-refocus' => TRUE,
+        'event' => 'change',
+        'wrapper' => 'hei_markup',
+      ],
+    ];
+
+    // Display Institution data from the first call to the provider.
+    $form['hei_markup'] = [
+      '#type' => 'markup',
+      '#markup' => '<div id="heiMarkup"></div>'
     ];
 
     // IF ounit_filter THEN build a select element with the ounit list.
+    if ($this->ounitFilter) {
+      $form['ounit'] = [
+        '#type' => 'select',
+        '#title' => $this->t('Organizational Units'),
+        '#options' => [],
+        '#empty_option' => $this->t('- Select an Organizational Unit -'),
+        '#default_value' => NULL,
+      ];
+    }
 
     // Check for an existing links key for programmes.
 
@@ -126,7 +189,7 @@ class OccapiImportForm extends FormBase {
       '#value' => $this->t('Submit'),
     ];
 
-    dpm($form);
+    // dpm($form);
 
     return $form;
   }
@@ -143,6 +206,44 @@ class OccapiImportForm extends FormBase {
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
 
+  }
+
+  /**
+  * AJAX callback to load and display an Institution.
+  */
+  public function heiMarkup(array &$form, FormStateInterface $form_state) {
+    $markup = '';
+
+    $provider_id = $form_state->getValue('provider');
+
+    if ($provider_id) {
+      $this->provider = $this->providerManager
+        ->getProvider($provider_id);
+
+      // Prepare Institution data.
+      $hei_id         = $this->provider->get('hei_id');
+      $hei_tempstore  = $provider_id . '.' . Manager::HEI_KEY . '.' . $hei_id;
+
+      $base_url       = $this->provider->get('base_url');
+      $hei_endpoint   = $base_url . '/' . Manager::HEI_KEY . '/' . $hei_id;
+
+      $hei_response = $this->jsonDataFetcher
+        ->load($hei_tempstore, $hei_endpoint);
+
+      $hei_data = \json_decode($hei_response, TRUE);
+      $hei_table = $this->dataFormatter
+        ->resourceTable($hei_data);
+
+      $hei_markup = '<p><code>GET ' . $hei_endpoint . '</code></p>';
+      $hei_markup .= $hei_table;
+
+      $markup .= $hei_markup;
+    }
+
+    $ajax_response = new AjaxResponse();
+    $ajax_response
+      ->addCommand(new HtmlCommand('#heiMarkup', $markup));
+    return $ajax_response;
   }
 
 }

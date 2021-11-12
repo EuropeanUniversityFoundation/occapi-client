@@ -242,7 +242,10 @@ class OccapiProviderPreviewForm extends EntityForm {
 
     if (
       ! $ounit_filter &&
-      array_key_exists(Manager::COURSE_KEY, ($hei_data[Json::LINKS_KEY]))
+      array_key_exists(
+        Manager::COURSE_KEY,
+        $hei_data[Json::LINKS_KEY]
+      )
     ) {
       // Prepare Course data.
       $course_tempstore = $provider_id . '.' . Manager::COURSE_KEY;
