@@ -8,6 +8,7 @@ use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\occapi_client\DataFormatter;
 use Drupal\occapi_client\JsonDataFetcher;
+use Drupal\occapi_client\OccapiProviderManager as Manager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -18,11 +19,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class OccapiProviderPreviewForm extends EntityForm {
 
   const JSONAPI_RESPONSE  = 'JSON:API response';
-
-  const HEI_KEY           = 'hei';
-  const OUNIT_KEY         = 'ounit';
-  const PROGRAMME_KEY     = 'programme';
-  const COURSE_KEY        = 'course';
 
   /**
    * OCCAPI endpoint.
@@ -53,6 +49,13 @@ class OccapiProviderPreviewForm extends EntityForm {
   protected $logger;
 
   /**
+   * OCCAPI provider manager service.
+   *
+   * @var \Drupal\occapi_client\OccapiProviderManager
+   */
+  protected $providerManager;
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
@@ -62,6 +65,7 @@ class OccapiProviderPreviewForm extends EntityForm {
     $instance->dataFormatter = $container->get('occapi_client.format');
     $instance->loggerFactory = $container->get('logger.factory');
     $instance->logger = $instance->loggerFactory->get('occapi_client');
+    $instance->providerManager = $container->get('occapi_client.manager');
     return $instance;
   }
 
@@ -76,7 +80,7 @@ class OccapiProviderPreviewForm extends EntityForm {
     $hei_id = $this->entity->get('hei_id');
     $ounit_filter = $this->entity->get('ounit_filter');
 
-    $this->occapiEndpoint = $base_url . '/' . self::HEI_KEY . '/' . $hei_id;
+    $this->occapiEndpoint = $base_url . '/' . Manager::HEI_KEY . '/' . $hei_id;
 
     $header_markup = '<h2>' . $this->entity->label() . '</h2>';
 
@@ -92,7 +96,7 @@ class OccapiProviderPreviewForm extends EntityForm {
     ];
 
     // Prepare Institution data.
-    $hei_tempstore = $provider_id . '.' . self::HEI_KEY . '.' . $hei_id;
+    $hei_tempstore = $provider_id . '.' . Manager::HEI_KEY . '.' . $hei_id;
     $hei_response = $this->jsonDataFetcher
       ->load($hei_tempstore, $this->occapiEndpoint);
 
@@ -132,7 +136,7 @@ class OccapiProviderPreviewForm extends EntityForm {
 
     if (
       array_key_exists(
-        self::OUNIT_KEY,
+        Manager::OUNIT_KEY,
         $hei_data[DataFormatter::LINKS_KEY]
       )
     ) {
@@ -140,8 +144,8 @@ class OccapiProviderPreviewForm extends EntityForm {
       $ounit_table = DataFormatter::NOT_AVAILABLE;
       $ounit_json = DataFormatter::NOT_AVAILABLE;
 
-      $ounit_tempstore = $provider_id . '.' . self::OUNIT_KEY;
-      $ounit_endpoint = $hei_data[DataFormatter::LINKS_KEY][self::OUNIT_KEY][DataFormatter::HREF_KEY];
+      $ounit_tempstore = $provider_id . '.' . Manager::OUNIT_KEY;
+      $ounit_endpoint = $hei_data[DataFormatter::LINKS_KEY][Manager::OUNIT_KEY][DataFormatter::HREF_KEY];
       $ounit_response = $this->jsonDataFetcher
         ->load($ounit_tempstore, $ounit_endpoint);
 
@@ -183,7 +187,7 @@ class OccapiProviderPreviewForm extends EntityForm {
     if (
       ! $ounit_filter &&
       array_key_exists(
-        self::PROGRAMME_KEY,
+        Manager::PROGRAMME_KEY,
         $hei_data[DataFormatter::LINKS_KEY]
       )
     ) {
@@ -191,8 +195,8 @@ class OccapiProviderPreviewForm extends EntityForm {
       $programme_table = DataFormatter::NOT_AVAILABLE;
       $programme_json = DataFormatter::NOT_AVAILABLE;
 
-      $programme_tempstore = $provider_id . '.' . self::PROGRAMME_KEY;
-      $programme_endpoint = $hei_data[DataFormatter::LINKS_KEY][self::PROGRAMME_KEY][DataFormatter::HREF_KEY];
+      $programme_tempstore = $provider_id . '.' . Manager::PROGRAMME_KEY;
+      $programme_endpoint = $hei_data[DataFormatter::LINKS_KEY][Manager::PROGRAMME_KEY][DataFormatter::HREF_KEY];
 
       $programme_response = $this->jsonDataFetcher
         ->load($programme_tempstore, $programme_endpoint);
@@ -234,14 +238,14 @@ class OccapiProviderPreviewForm extends EntityForm {
 
     if (
       ! $ounit_filter &&
-      array_key_exists(self::COURSE_KEY, ($hei_data[DataFormatter::LINKS_KEY]))
+      array_key_exists(Manager::COURSE_KEY, ($hei_data[DataFormatter::LINKS_KEY]))
     ) {
       // Prepare Course data.
       $course_table = DataFormatter::NOT_AVAILABLE;
       $course_json = DataFormatter::NOT_AVAILABLE;
 
-      $course_tempstore = $provider_id . '.' . self::COURSE_KEY;
-      $course_endpoint = $hei_data[DataFormatter::LINKS_KEY][self::COURSE_KEY][DataFormatter::HREF_KEY];
+      $course_tempstore = $provider_id . '.' . Manager::COURSE_KEY;
+      $course_endpoint = $hei_data[DataFormatter::LINKS_KEY][Manager::COURSE_KEY][DataFormatter::HREF_KEY];
       $course_response = $this->jsonDataFetcher
         ->load($course_tempstore, $course_endpoint);
 
@@ -288,7 +292,7 @@ class OccapiProviderPreviewForm extends EntityForm {
 
     if (
       array_key_exists(
-        self::OUNIT_KEY,
+        Manager::OUNIT_KEY,
         $hei_data[DataFormatter::LINKS_KEY]
       )
     ) {
@@ -367,7 +371,7 @@ class OccapiProviderPreviewForm extends EntityForm {
     if (
       ! $ounit_filter &&
       array_key_exists(
-        self::PROGRAMME_KEY,
+        Manager::PROGRAMME_KEY,
         $hei_data[DataFormatter::LINKS_KEY]
       )
     ) {
@@ -446,7 +450,7 @@ class OccapiProviderPreviewForm extends EntityForm {
       $ounit_links = $form_state->getValue('ounit_programme_links');
       $ounit_uri = $ounit_links[$ounit_id];
 
-      $ounit_tempstore = $this->entity->id() . '.' . self::OUNIT_KEY;
+      $ounit_tempstore = $this->entity->id() . '.' . Manager::OUNIT_KEY;
       $ounit_tempstore .= '.' . $ounit_id;
 
       $message = $this->t('Retrieving ounit with ID: ') . $ounit_id;
@@ -466,15 +470,15 @@ class OccapiProviderPreviewForm extends EntityForm {
 
       if (
         array_key_exists(
-          self::PROGRAMME_KEY,
+          Manager::PROGRAMME_KEY,
           $ounit_data[DataFormatter::LINKS_KEY]
         )
       ) {
         // Programme collection data.
-        $programme_tempstore = $this->entity->id() . '.' . self::OUNIT_KEY;
-        $programme_tempstore .= '.' . $ounit_id . '.' . self::PROGRAMME_KEY;
+        $programme_tempstore = $this->entity->id() . '.' . Manager::OUNIT_KEY;
+        $programme_tempstore .= '.' . $ounit_id . '.' . Manager::PROGRAMME_KEY;
 
-        $programme_endpoint = $ounit_data[DataFormatter::LINKS_KEY][self::PROGRAMME_KEY][DataFormatter::HREF_KEY];
+        $programme_endpoint = $ounit_data[DataFormatter::LINKS_KEY][Manager::PROGRAMME_KEY][DataFormatter::HREF_KEY];
 
         $programme_response = $this->jsonDataFetcher
           ->load($programme_tempstore, $programme_endpoint);
@@ -509,7 +513,7 @@ class OccapiProviderPreviewForm extends EntityForm {
       $ounit_links = $form_state->getValue('ounit_course_links');
       $ounit_uri = $ounit_links[$ounit_id];
 
-      $ounit_tempstore = $this->entity->id() . '.' . self::OUNIT_KEY;
+      $ounit_tempstore = $this->entity->id() . '.' . Manager::OUNIT_KEY;
       $ounit_tempstore .= '.' . $ounit_id;
 
       $message = $this->t('Retrieving ounit with ID: ') . $ounit_id;
@@ -529,15 +533,15 @@ class OccapiProviderPreviewForm extends EntityForm {
 
       if (
         array_key_exists(
-          self::COURSE_KEY,
+          Manager::COURSE_KEY,
           $ounit_data[DataFormatter::LINKS_KEY]
         )
       ) {
         // Course collection data.
-        $course_tempstore = $this->entity->id() . '.' . self::OUNIT_KEY;
-        $course_tempstore .= '.' . $ounit_id . '.' . self::COURSE_KEY;
+        $course_tempstore = $this->entity->id() . '.' . Manager::OUNIT_KEY;
+        $course_tempstore .= '.' . $ounit_id . '.' . Manager::COURSE_KEY;
 
-        $course_endpoint = $ounit_data[DataFormatter::LINKS_KEY][self::COURSE_KEY][DataFormatter::HREF_KEY];
+        $course_endpoint = $ounit_data[DataFormatter::LINKS_KEY][Manager::COURSE_KEY][DataFormatter::HREF_KEY];
         $course_response = $this->jsonDataFetcher
           ->load($course_tempstore, $course_endpoint);
 
@@ -571,7 +575,7 @@ class OccapiProviderPreviewForm extends EntityForm {
       $programme_links = $form_state->getValue('programme_course_links');
       $programme_uri = $programme_links[$programme_id];
 
-      $programme_tempstore = $this->entity->id() . '.' . self::PROGRAMME_KEY;
+      $programme_tempstore = $this->entity->id() . '.' . Manager::PROGRAMME_KEY;
       $programme_tempstore .= '.' . $programme_id;
 
       $message = $this->t('Retrieving programme with ID: ') . $programme_id;
@@ -591,15 +595,15 @@ class OccapiProviderPreviewForm extends EntityForm {
 
       if (
         array_key_exists(
-          self::COURSE_KEY,
+          Manager::COURSE_KEY,
           $programme_data[DataFormatter::LINKS_KEY]
         )
       ) {
         // Course collection data.
-        $course_tempstore = $this->entity->id() . '.' . self::PROGRAMME_KEY;
-        $course_tempstore .= '.' . $programme_id . '.' . self::COURSE_KEY;
+        $course_tempstore = $this->entity->id() . '.' . Manager::PROGRAMME_KEY;
+        $course_tempstore .= '.' . $programme_id . '.' . Manager::COURSE_KEY;
 
-        $course_endpoint = $programme_data[DataFormatter::LINKS_KEY][self::COURSE_KEY][DataFormatter::HREF_KEY];
+        $course_endpoint = $programme_data[DataFormatter::LINKS_KEY][Manager::COURSE_KEY][DataFormatter::HREF_KEY];
         $course_response = $this->jsonDataFetcher
           ->load($course_tempstore, $course_endpoint);
 

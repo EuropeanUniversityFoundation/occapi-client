@@ -18,6 +18,11 @@ class OccapiProviderManager {
 
   use StringTranslationTrait;
 
+  const HEI_KEY           = 'hei';
+  const OUNIT_KEY         = 'ounit';
+  const PROGRAMME_KEY     = 'programme';
+  const COURSE_KEY        = 'course';
+
   /**
    * Config factory.
    *
