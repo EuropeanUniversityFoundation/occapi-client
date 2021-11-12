@@ -18,6 +18,8 @@ class OccapiProviderManager {
 
   use StringTranslationTrait;
 
+  const ENTITY_TYPE       = 'occapi_provider';
+
   const HEI_KEY           = 'hei';
   const OUNIT_KEY         = 'ounit';
   const PROGRAMME_KEY     = 'programme';
@@ -112,4 +114,14 @@ class OccapiProviderManager {
     $this->stringTranslation  = $string_translation;
   }
 
+  /**
+   * Get a list of OCCAPI providers.
+   */
+  public function getProviders() {
+    $providers = $this->entityTypeManager
+      ->getStorage(self::ENTITY_TYPE)
+      ->loadMultiple();
+
+    return $providers;
+  }
 }

@@ -6,7 +6,7 @@ use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\occapi_client\DataFormatter;
 use Drupal\occapi_client\JsonDataFetcher;
-use Drupal\occapi_client\OccapiProviderManager;
+use Drupal\occapi_client\OccapiProviderManager as Manager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -15,11 +15,18 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class OccapiImportForm extends FormBase {
 
   /**
-   * OCCAPI endpoint.
+   * OCCAPI programme to import.
    *
    * @var string
    */
-  protected $occapiEndpoint;
+  protected $programme;
+
+  /**
+   * Data formatter service.
+   *
+   * @var \Drupal\occapi_client\DataFormatter
+   */
+  protected $dataFormatter;
 
   /**
    * JSON data fetcher service.
@@ -29,11 +36,11 @@ class OccapiImportForm extends FormBase {
   protected $jsonDataFetcher;
 
   /**
-   * Data formatter service.
+   * JSON data processing service.
    *
-   * @var \Drupal\occapi_client\DataFormatter
+   * @var \Drupal\occapi_client\JsonDataProcessor
    */
-  protected $dataFormatter;
+  protected $jsonDataProcessor;
 
   /**
    * The logger service.
@@ -55,11 +62,12 @@ class OccapiImportForm extends FormBase {
   public static function create(ContainerInterface $container) {
     // Instantiates this form class.
     $instance = parent::create($container);
-    $instance->jsonDataFetcher = $container->get('occapi_client.fetch');
-    $instance->dataFormatter = $container->get('occapi_client.format');
-    $instance->loggerFactory = $container->get('logger.factory');
+    $instance->dataFormatter        = $container->get('occapi_client.format');
+    $instance->jsonDataFetcher      = $container->get('occapi_client.fetch');
+    $instance->jsonDataProcessor    = $container->get('occapi_client.json');
+    $instance->loggerFactory        = $container->get('logger.factory');
     $instance->logger = $instance->loggerFactory->get('occapi_entities_bridge');
-    $instance->providerManager = $container->get('occapi_client.manager');
+    $instance->providerManager      = $container->get('occapi_client.manager');
     return $instance;
   }
 
@@ -75,22 +83,50 @@ class OccapiImportForm extends FormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
 
-    dpm($this);
-    dpm($form);
+    // dpm($this);
 
-    $form['message'] = [
-      '#type' => 'textarea',
-      '#title' => $this->t('Message'),
-      '#required' => TRUE,
+    // Load all available OCCAPI providers.
+    $providers = $this->providerManager
+      ->getProviders();
+
+    // Build a select element with the provider list.
+    $provider_titles = [];
+
+    foreach ($providers as $id => $provider) {
+      $title = $provider->label();
+      $title .= ' ('. $provider->get('hei_id') .')';
+      $provider_titles[$id] = $title;
+    }
+
+    $form['provider'] = [
+      '#type' => 'select',
+      '#title' => $this->t('OCCAPI providers'),
+      '#options' => $provider_titles,
+      '#empty_option' => $this->t('- Select a provider -'),
+      '#default_value' => NULL,
     ];
+
+    // IF ounit_filter THEN build a select element with the ounit list.
+
+    // Check for an existing links key for programmes.
+
+    // Build a select element with the programme list.
+
+    // Display programme resource data.
+
+    // Check for an existing links key for courses.
+
+    // Display course collection data.
 
     $form['actions'] = [
       '#type' => 'actions',
     ];
     $form['actions']['submit'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Send'),
+      '#value' => $this->t('Submit'),
     ];
+
+    dpm($form);
 
     return $form;
   }
@@ -99,17 +135,14 @@ class OccapiImportForm extends FormBase {
    * {@inheritdoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
-    if (mb_strlen($form_state->getValue('message')) < 10) {
-      $form_state->setErrorByName('name', $this->t('Message should be at least 10 characters.'));
-    }
+
   }
 
   /**
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    $this->messenger()->addStatus($this->t('The message has been sent.'));
-    $form_state->setRedirect('<front>');
+
   }
 
 }
