@@ -52,6 +52,13 @@ class OccapiProviderManager {
   protected $jsonDataFetcher;
 
   /**
+  * JSON data processing service.
+  *
+  * @var \Drupal\occapi_client\JsonDataProcessor
+  */
+  protected $jsonDataProcessor;
+
+  /**
    * The logger service.
    *
    * @var \Psr\Log\LoggerInterface
@@ -76,6 +83,8 @@ class OccapiProviderManager {
    *   The entity type manager.
    * @param \Drupal\occapi_client\JsonDataFetcher $json_data_fetcher
    *   JSON data fetching service.
+   * @param \Drupal\occapi_client\JsonDataProcessor $json_data_processor
+   *   JSON data processing service.
    * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $logger_factory
    *   The logger factory service.
    * @param \Drupal\Core\Messenger\MessengerInterface $messenger
@@ -88,6 +97,7 @@ class OccapiProviderManager {
       DataFormatter $data_formatter,
       EntityTypeManagerInterface $entity_type_manager,
       JsonDataFetcher $json_data_fetcher,
+      JsonDataProcessor $json_data_processor,
       LoggerChannelFactoryInterface $logger_factory,
       MessengerInterface $messenger,
       TranslationInterface $string_translation
@@ -96,6 +106,7 @@ class OccapiProviderManager {
     $this->dataFormatter      = $data_formatter;
     $this->entityTypeManager  = $entity_type_manager;
     $this->jsonDataFetcher    = $json_data_fetcher;
+    $this->jsonDataProcessor  = $json_data_processor;
     $this->logger             = $logger_factory->get('occapi_client');
     $this->messenger          = $messenger;
     $this->stringTranslation  = $string_translation;

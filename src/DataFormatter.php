@@ -15,8 +15,6 @@ class DataFormatter {
 
   use StringTranslationTrait;
 
-  const NOT_AVAILABLE   = '<em>n/a</em>';
-
   /**
   * JSON data processing service.
   *
@@ -38,40 +36,6 @@ class DataFormatter {
   ) {
     $this->jsonDataProcessor = $json_data_processor;
     $this->stringTranslation = $string_translation;
-  }
-
-  /**
-   * Gather resource collection titles.
-   */
-  public function collectionTitles($collection) {
-    $titles = [];
-
-    foreach ($collection as $i => $resource) {
-      $id = $resource[Json::ID_KEY];
-      $title = $this->jsonDataProcessor
-        ->extractTitle($resource[Json::ATTR_KEY]);
-      $title = ($title === self::NOT_AVAILABLE) ? $id : $title;
-
-      $titles[$id] = $title;
-    }
-
-    return $titles;
-  }
-
-  /**
-   * Gather resource collection links.
-   */
-  public function collectionLinks($collection) {
-    $links = [];
-
-    foreach ($collection as $i => $resource) {
-      $id = $resource[Json::ID_KEY];
-      $uri = $resource[Json::LINKS_KEY][Json::SELF_KEY][Json::HREF_KEY];
-
-      $links[$id] = $uri;
-    }
-
-    return $links;
   }
 
   /**
@@ -152,45 +116,6 @@ class DataFormatter {
     ];
 
     return render($build);
-  }
-
-  /**
-   * Extract title from attributes.
-   */
-  private function extractTitle($attributes) {
-    $title = self::NOT_AVAILABLE;
-
-    if (\array_key_exists(Json::TITLE_KEY, $attributes)) {
-      // Enforce an array of title objects.
-      if (! \array_key_exists(0, $attributes[Json::TITLE_KEY])) {
-        $title_array = [$attributes[Json::TITLE_KEY]];
-      } else {
-        $title_array = $attributes[Json::TITLE_KEY];
-      }
-
-      // Sort the title objects by prefered lang value.
-      $title_primary = [];
-      $title_fallback = [];
-      $title_ordered = [];
-
-      foreach ($title_array as $i => $arr) {
-        if (
-          \array_key_exists(Json::LANG_KEY, $arr) &&
-          $arr[Json::LANG_KEY] === Json::LANG_PREF
-        ) {
-          \array_push($title_primary, $arr);
-        } else {
-          \array_push($title_fallback, $arr);
-        }
-        $title_ordered = \array_merge($title_primary, $title_fallback);
-      }
-
-      if (count($title_ordered) > 0) {
-        $title = $title_ordered[0][Json::VALUE_KEY];
-      }
-    }
-
-    return $title;
   }
 
 }
