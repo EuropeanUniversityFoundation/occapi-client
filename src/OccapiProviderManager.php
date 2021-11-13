@@ -10,6 +10,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\occapi_client\DataFormatter;
 use Drupal\occapi_client\JsonDataFetcher;
+use Drupal\occapi_client\JsonDataProcessor as Json;
 
 /**
  * Service for managing OCCAPI providers.
@@ -128,7 +129,7 @@ class OccapiProviderManager {
   /**
    * Get an OCCAPI provider by ID.
    */
-  public function getProvider($id) {
+  public function getProvider(string $id) {
     $providers = $this->entityTypeManager
       ->getStorage(self::ENTITY_TYPE)
       ->loadByProperties(['id' => $id]);
@@ -139,4 +140,205 @@ class OccapiProviderManager {
 
     return $provider;
   }
+
+  /**
+  * Load Institution resource.
+  *
+  * @param string $provider_id
+  *   The OCCAPI provider ID.
+  *
+  * @return array $data
+  *   An array containing the JSON:API Institution resource data.
+  */
+  public function loadInstitution(string $provider_id) {
+    $provider = $this->getProvider($provider_id);
+
+    $hei_id   = $provider->get('hei_id');
+    $base_url = $provider->get('base_url');
+
+    $tempstore = $provider_id . '.' . self::HEI_KEY . '.' . $hei_id;
+
+    $endpoint = $base_url . '/' . self::HEI_KEY . '/' . $hei_id;
+
+    $response = $this->jsonDataFetcher
+      ->load($tempstore, $endpoint);
+
+    $data = \json_decode($response, TRUE);
+
+    return $data;
+  }
+
+  /**
+   * Load resource collection by type.
+   *
+   * @param string $provider_id
+   *   The OCCAPI provider ID.
+   * @param string $type
+   *   The JSON:API resource type key.
+   *
+   * @return array $data
+   *   An array containing the JSON:API resource collection data.
+   */
+  private function loadCollection(string $provider_id, string $type) {
+    $provider = $this->getProvider($provider_id);
+
+    if (
+      empty($provider) ||
+      ! \in_array($type, [
+        self::OUNIT_KEY,
+        self::PROGRAMME_KEY,
+        self::COURSE_KEY
+      ])
+    ) {
+      return [];
+    }
+
+    $tempstore = $provider_id . '.' . $type;
+
+    // If data is present in TempStore the endpoint is ignored.
+    $endpoint = '';
+
+    if (empty($this->jsonDataFetcher->checkUpdated($tempstore))) {
+      $hei_data = $this->loadInstitution($provider_id);
+
+      if (! \in_array($type, $hei_data[Json::LINKS_KEY])) {
+        return [];
+      }
+
+      $endpoint = $this->jsonDataProcessor
+        ->getLink($hei_data, $type);
+    }
+
+    $response = $this->jsonDataFetcher
+      ->load($tempstore, $endpoint);
+
+    $data = \json_decode($response, TRUE);
+
+    return $data;
+  }
+
+  /**
+   * Load single resource by type and ID.
+   *
+   * @param string $provider_id
+   *   The OCCAPI provider ID.
+   * @param string $type
+   *   The JSON:API resource type key.
+   * @param string $id
+   *   The JSON:API resource ID.
+   *
+   * @return array $data
+   *   An array containing the JSON:API resource data.
+   */
+  private function loadResource(string $provider_id, string $type, string $id) {
+    $collection = $this->loadCollection($provider_id, $type);
+
+    if (empty($collection)) {
+      return [];
+    }
+
+    $tempstore = $provider_id . '.' . $type . $id;
+
+    // If data is present in TempStore the endpoint is ignored.
+    $endpoint = '';
+
+    if (empty($this->jsonDataFetcher->checkUpdated($tempstore))) {
+      foreach ($collection as $i => $resource) {
+        if ($this->jsonDataProcessor->getId($resource) === $id) {
+          $endpoint = $this->jsonDataProcessor
+            ->getLink($resource, self::SELF_KEY);
+        }
+      }
+
+      if (empty($endpoint)) {
+        return [];
+      }
+    }
+
+    $response = $this->jsonDataFetcher
+      ->load($tempstore, $endpoint);
+
+    $data = \json_decode($response, TRUE);
+
+    return $data;
+  }
+
+  /**
+   * Load Organizational Unit collection.
+   *
+   * @param string $provider_id
+   *   The OCCAPI provider ID.
+   *
+   * @return array
+   */
+  public function loadOunits(string $provider_id) {
+    return $this->loadCollection($provider_id, self::OUNIT_KEY);
+  }
+
+  /**
+   * Load Organizational Unit resource by ID.
+   *
+   * @param string $provider_id
+   *   The OCCAPI provider ID.
+   * @param string $id
+   *   The JSON:API resource ID.
+   *
+   * @return array
+   */
+  public function loadOunit(string $provider_id, string $id) {
+    return $this->loadResource($provider_id, self::OUNIT_KEY, $id);
+  }
+
+  /**
+   * Load Programme collection.
+   *
+   * @param string $provider_id
+   *   The OCCAPI provider ID.
+   *
+   * @return array
+   */
+  public function loadProgrammes(string $provider_id) {
+    return $this->loadCollection($provider_id, self::PROGRAMME_KEY);
+  }
+
+  /**
+   * Load Programme resource by ID.
+   *
+   * @param string $provider_id
+   *   The OCCAPI provider ID.
+   * @param string $id
+   *   The JSON:API resource ID.
+   *
+   * @return array
+   */
+  public function loadProgramme(string $provider_id, string $id) {
+    return $this->loadResource($provider_id, self::PROGRAMME_KEY, $id);
+  }
+
+  /**
+   * Load Course collection.
+   *
+   * @param string $provider_id
+   *   The OCCAPI provider ID.
+   *
+   * @return array
+   */
+  public function loadProgrammes(string $provider_id) {
+    return $this->loadCollection($provider_id, self::COURSE_KEY);
+  }
+
+  /**
+   * Load Course resource by ID.
+   *
+   * @param string $provider_id
+   *   The OCCAPI provider ID.
+   * @param string $id
+   *   The JSON:API resource ID.
+   *
+   * @return array
+   */
+  public function loadProgramme(string $provider_id, string $id) {
+    return $this->loadResource($provider_id, self::COURSE_KEY, $id);
+  }
+
 }
