@@ -300,15 +300,8 @@ class OccapiImportForm extends FormBase {
         ->getProvider($provider_id);
 
       // Fetch Institution data.
-      $hei_id = $this->provider->get('hei_id');
-      $hei_tempstore = $provider_id . '.' . Manager::HEI_KEY . '.' . $hei_id;
-      $base_url = $this->provider->get('base_url');
-      $hei_endpoint = $base_url . '/' . Manager::HEI_KEY . '/' . $hei_id;
-
-      $hei_response = $this->jsonDataFetcher
-        ->load($hei_tempstore, $hei_endpoint);
-
-      $this->heiResource = \json_decode($hei_response, TRUE);
+      $this->heiResource = $this->providerManager
+        ->loadInstitution($provider_id);
 
       // Fetch Programme data.
       if (

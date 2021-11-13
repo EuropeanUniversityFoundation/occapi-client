@@ -105,11 +105,8 @@ class OccapiProviderPreviewForm extends EntityForm {
     ];
 
     // Prepare Institution data.
-    $hei_tempstore = $provider_id . '.' . Manager::HEI_KEY . '.' . $hei_id;
-    $hei_response = $this->jsonDataFetcher
-      ->load($hei_tempstore, $this->occapiEndpoint);
-
-    $hei_data = \json_decode($hei_response, TRUE);
+    $hei_data = $this->providerManager
+      ->loadInstitution($provider_id);
     $hei_json = \json_encode(
       $hei_data[Json::DATA_KEY],
       JSON_PRETTY_PRINT

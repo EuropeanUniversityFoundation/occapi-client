@@ -52,14 +52,13 @@ class DataFormatter {
     $rows = [];
 
     foreach ($collection as $i => $resource) {
-      $uri = $resource[Json::LINKS_KEY][Json::SELF_KEY][Json::HREF_KEY];
+      $uri = $this->jsonDataProcessor->getLink($resource, Json::SELF_KEY);
       $options = ['attributes' => ['target' => '_blank']];
 
       $row = [
-        $resource[Json::TYPE_KEY],
-        $resource[Json::ID_KEY],
-        $this->jsonDataProcessor
-          ->extractTitle($resource[Json::ATTR_KEY]),
+        $this->jsonDataProcessor->getType($resource),
+        $this->jsonDataProcessor->getId($resource),
+        $this->jsonDataProcessor->getTitle($resource),
         Link::fromTextAndUrl(Json::SELF_KEY, Url::fromUri($uri, $options))
       ];
 
@@ -95,10 +94,9 @@ class DataFormatter {
     $rows = [];
 
     $row = [
-      $resource[Json::DATA_KEY][Json::TYPE_KEY],
-      $resource[Json::DATA_KEY][Json::ID_KEY],
-      $this->jsonDataProcessor
-        ->extractTitle($resource[Json::DATA_KEY][Json::ATTR_KEY]),
+      $this->jsonDataProcessor->getType($resource),
+      $this->jsonDataProcessor->getId($resource),
+      $this->jsonDataProcessor->getTitle($resource),
     ];
 
     $options = ['attributes' => ['target' => '_blank']];
