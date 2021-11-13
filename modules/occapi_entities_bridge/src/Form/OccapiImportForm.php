@@ -2,12 +2,14 @@
 
 namespace Drupal\occapi_entities_bridge\Form;
 
-use Drupal\Core\Ajax\AjaxResponse;
-use Drupal\Core\Ajax\HtmlCommand;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Link;
+use Drupal\Core\Render\Element\StatusMessages;
+use Drupal\Core\Url;
 use Drupal\occapi_client\DataFormatter;
 use Drupal\occapi_client\JsonDataFetcher;
+use Drupal\occapi_client\JsonDataProcessor as Json;
 use Drupal\occapi_client\OccapiProviderManager as Manager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -24,39 +26,32 @@ class OccapiImportForm extends FormBase {
   protected $provider;
 
   /**
-   * OCCAPI provider ounit_filter.
-   *
-   * @var boolean
-   */
-  protected $ounitFilter = FALSE;
-
-  /**
-   * OCCAPI Institution data.
+   * OCCAPI Institution resource.
    *
    * @var array
    */
-  protected $heiData;
+  protected $heiResource;
 
   /**
-   * OCCAPI OUnit data.
+   * OCCAPI Organizational Unit collection.
    *
    * @var array
    */
-  protected $ounitData;
+  protected $ounitCollection;
 
   /**
-   * OCCAPI Programme data.
+   * OCCAPI Programme collection.
    *
    * @var array
    */
-  protected $programmeData;
+  protected $programmeCollection;
 
   /**
-   * OCCAPI Course data.
+   * OCCAPI Course collection.
    *
    * @var array
    */
-  protected $courseData;
+  protected $courseCollection;
 
   /**
    * Data formatter service.
@@ -119,13 +114,28 @@ class OccapiImportForm extends FormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
-    $this->logger->notice('Building form...');
+    $user = \Drupal::currentUser();
 
-    if ($this->provider) {
-      $this->ounitFilter = $this->provider->get('ounit_filter');
-    } else {
-      $this->ounitFilter = FALSE;
+    // Give a user with permission the opportunity to add an entity manually
+    if ($user->hasPermission('bypass import occapi entities')) {
+      $add_programme_link = Link::fromTextAndUrl(t('add a new Programme'),
+        Url::fromRoute('entity.programme.add_form'))->toString();
+      $add_course_link = Link::fromTextAndUrl(t('add a new Course'),
+        Url::fromRoute('entity.course.add_form'))->toString();
+
+      $warning = $this->t('You can bypass this form and @add_programme or @add_course manually.',[
+        '@add_programme' => $add_programme_link,
+        '@add_course' => $add_course_link
+      ]);
+
+      $form['messages'] = [
+        '#type' => 'markup',
+        '#markup' => $warning,
+        '#weight' => '-20'
+      ];
     }
+
+    $this->logger->notice('Building form...');
 
     // Load all available OCCAPI providers.
     $providers = $this->providerManager
@@ -140,54 +150,111 @@ class OccapiImportForm extends FormBase {
       $provider_titles[$id] = $title;
     }
 
-    $form['provider'] = [
+    // Build the form header with the AJAX components.
+    $form['header'] = [
+      '#type' => 'fieldset',
+      '#title' => $this->t('Select a Programme to import'),
+      '#weight' => '-10'
+    ];
+
+    $form['header']['provider_select'] = [
       '#type' => 'select',
       '#title' => $this->t('OCCAPI providers'),
       '#options' => $provider_titles,
-      '#empty_option' => $this->t('- Select a provider -'),
-      '#default_value' => NULL,
+      '#default_value' => '',
+      '#empty_value' => '',
       '#ajax' => [
-        'callback' => '::heiMarkup',
+        'callback' => '::getProgrammeList',
         'disable-refocus' => TRUE,
         'event' => 'change',
-        'wrapper' => 'hei_markup',
+        'wrapper' => 'programmeSelect',
+      ],
+      '#attributes' => [
+        'name' => 'provider_select',
+      ],
+      '#weight' => '-9',
+    ];
+
+    $form['header']['programme_select'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Programme'),
+      '#prefix' => '<div id="programmeSelect">',
+      '#suffix' => '</div>',
+      '#options' => [],
+      '#default_value' => '',
+      '#empty_value' => '',
+      '#ajax' => [
+        'callback' => '::previewProgramme',
+        'disable-refocus' => TRUE,
+        'event' => 'change',
+        'wrapper' => 'data',
+      ],
+      '#validated' => TRUE,
+      '#states' => [
+        'disabled' => [
+          ':input[name="provider_select"]' => ['value' => ''],
+        ],
+      ],
+      '#weight' => '-8',
+    ];
+
+    $form['data'] = [
+      '#type' => 'fieldset',
+      '#title' => $this->t('Data'),
+      '#prefix' => '<div id="data">',
+      '#suffix' => '</div>',
+      '#weight' => '-7',
+    ];
+
+    $form['data']['status'] = [
+      '#type' => 'hidden',
+      '#value' => '',
+      '#attributes' => [
+        'name' => 'data_status',
       ],
     ];
 
-    // Display Institution data from the first call to the provider.
-    $form['hei_markup'] = [
+    $form['data']['preview'] = [
       '#type' => 'markup',
-      '#markup' => '<div id="heiMarkup"></div>'
+      '#markup' => '<p><em>' . $this->t('Nothing to display.') . '</em></p>',
     ];
-
-    // IF ounit_filter THEN build a select element with the ounit list.
-    if ($this->ounitFilter) {
-      $form['ounit'] = [
-        '#type' => 'select',
-        '#title' => $this->t('Organizational Units'),
-        '#options' => [],
-        '#empty_option' => $this->t('- Select an Organizational Unit -'),
-        '#default_value' => NULL,
-      ];
-    }
-
-    // Check for an existing links key for programmes.
-
-    // Build a select element with the programme list.
-
-    // Display programme resource data.
-
-    // Check for an existing links key for courses.
-
-    // Display course collection data.
 
     $form['actions'] = [
       '#type' => 'actions',
+      '#weight' => '-6',
     ];
-    $form['actions']['submit'] = [
+
+    $form['actions']['import'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Submit'),
+      '#value' => $this->t('Import'),
+      '#attributes' => [
+        'class' => [
+          'button--primary',
+        ]
+      ],
+      '#states' => [
+        'disabled' => [
+          ':input[name="programme_select"]' => ['value' => ''],
+        ],
+        'visible' => [
+          ':input[name="data_status"]' => ['value' => ''],
+        ],
+      ],
     ];
+
+    // $form['actions']['load'] = [
+    //   '#type' => 'submit',
+    //   '#submit' => ['::loadImportForm'],
+    //   '#value' => $this->t('Load Import form'),
+    //   '#states' => [
+    //     'disabled' => [
+    //       ':input[name="hei_select"]' => ['value' => ''],
+    //     ],
+    //     'visible' => [
+    //       ':input[name="data_status"]' => ['value' => ''],
+    //     ],
+    //   ],
+    // ];
 
     // dpm($form);
 
@@ -197,53 +264,84 @@ class OccapiImportForm extends FormBase {
   /**
    * {@inheritdoc}
    */
-  public function validateForm(array &$form, FormStateInterface $form_state) {
-
+  public function submitForm(array &$form, FormStateInterface $form_state) {
+    // $index_item = $form_state->getValue('index_select');
+    // $hei_id = $form_state->getValue('hei_select');
+    //
+    // $form_state->setRedirect('entity.hei.auto_import',[
+    //   'index_key' => $index_item,
+    //   'hei_key' => $hei_id
+    // ]);
   }
 
   /**
    * {@inheritdoc}
    */
-  public function submitForm(array &$form, FormStateInterface $form_state) {
-
+  public function loadImportForm(array &$form, FormStateInterface $form_state) {
+    // $index_item = $form_state->getValue('index_select');
+    // $hei_id = $form_state->getValue('hei_select');
+    //
+    // $form_state->setRedirect('entity.hei.import_form',[
+    //   'index_key' => $index_item,
+    //   'hei_key' => $hei_id
+    // ]);
   }
 
   /**
-  * AJAX callback to load and display an Institution.
+  * Fetch the Institution data and build the Programme select list.
   */
-  public function heiMarkup(array &$form, FormStateInterface $form_state) {
-    $markup = '';
-
-    $provider_id = $form_state->getValue('provider');
+  public function getProgrammeList(array $form, FormStateInterface $form_state) {
+    $provider_id = $form_state->getValue('provider_select');
 
     if ($provider_id) {
+      $options = ['' => '- None -'];
+
       $this->provider = $this->providerManager
         ->getProvider($provider_id);
 
-      // Prepare Institution data.
-      $hei_id         = $this->provider->get('hei_id');
-      $hei_tempstore  = $provider_id . '.' . Manager::HEI_KEY . '.' . $hei_id;
-
-      $base_url       = $this->provider->get('base_url');
-      $hei_endpoint   = $base_url . '/' . Manager::HEI_KEY . '/' . $hei_id;
+      // Fetch Institution data.
+      $hei_id = $this->provider->get('hei_id');
+      $hei_tempstore = $provider_id . '.' . Manager::HEI_KEY . '.' . $hei_id;
+      $base_url = $this->provider->get('base_url');
+      $hei_endpoint = $base_url . '/' . Manager::HEI_KEY . '/' . $hei_id;
 
       $hei_response = $this->jsonDataFetcher
         ->load($hei_tempstore, $hei_endpoint);
 
-      $hei_data = \json_decode($hei_response, TRUE);
-      $hei_table = $this->dataFormatter
-        ->resourceTable($hei_data);
+      $this->heiResource = \json_decode($hei_response, TRUE);
 
-      $hei_markup = '<p><code>GET ' . $hei_endpoint . '</code></p>';
-      $hei_markup .= $hei_table;
+      // Fetch Programme data.
+      if (
+        ! $this->provider->get('ounit_filter') &&
+        array_key_exists(
+          Manager::PROGRAMME_KEY,
+          $this->heiResource[Json::LINKS_KEY]
+        )
+      ) {
+        $programme_tempstore = $provider_id . '.' . Manager::PROGRAMME_KEY;
+        $programme_endpoint = $this->heiResource[Json::LINKS_KEY][Manager::PROGRAMME_KEY][Json::HREF_KEY];
 
-      $markup .= $hei_markup;
+        $programme_response = $this->jsonDataFetcher
+          ->load($programme_tempstore, $programme_endpoint);
+
+        $this->programmeCollection = \json_decode($programme_response, TRUE);
+
+        $options += $this->jsonDataProcessor
+          ->collectionTitles($this->programmeCollection[Json::DATA_KEY]);
+      }
+
+      $form['header']['programme_select']['#options'] = $options;
+      return $form['header']['programme_select'];
     }
 
-    $ajax_response = new AjaxResponse();
-    $ajax_response
-      ->addCommand(new HtmlCommand('#heiMarkup', $markup));
-    return $ajax_response;
+  }
+
+  /**
+  * Fetch the data and preview Programme
+  */
+  public function previewProgramme(array $form, FormStateInterface $form_state) {
+
+    return $form['data'];
   }
 
 }
