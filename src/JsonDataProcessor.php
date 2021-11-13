@@ -61,50 +61,65 @@ class JsonDataProcessor {
   }
 
   /**
-   * Gather resource collection titles.
+   * Get a resource type.
+   *
+   * @param array $resource
+   *   An array containing a JSON:API resource data.
+   *
+   * @return string $type
+   *   The type of the JSON:API resource.
    */
-  public function collectionTitles($collection) {
-    $titles = [];
+  public function getType(array $resource) {
+    $type = $resource[Json::DATA_KEY][Json::TYPE_KEY];
 
-    foreach ($collection as $i => $resource) {
-      $id = $resource[self::ID_KEY];
-      $title = $this->extractTitle($resource[self::ATTR_KEY]);
-      $title = ($title) ? $title : $id;
-
-      $titles[$id] = $title;
-    }
-
-    return $titles;
+    return $type;
   }
 
   /**
-   * Gather resource collection links.
+   * Get a resource ID.
+   *
+   * @param array $resource
+   *   An array containing a JSON:API resource data.
+   *
+   * @return string $id
+   *   The id of the JSON:API resource.
    */
-  public function collectionLinks($collection) {
-    $links = [];
+  public function getId(array $resource) {
+    $id = $resource[Json::DATA_KEY][Json::ID_KEY];
 
-    foreach ($collection as $i => $resource) {
-      $id = $resource[self::ID_KEY];
-      $uri = $resource[self::LINKS_KEY][self::SELF_KEY][self::HREF_KEY];
-
-      $links[$id] = $uri;
-    }
-
-    return $links;
+    return $id;
   }
 
   /**
-   * Extract title from attributes.
-   */
-  public function extractTitle($attributes) {
+  * Get a resource title.
+  *
+  * @param array $resource
+  *   An array containing a JSON:API resource data.
+  *
+  * @return string $title
+  *   The title attribute of the JSON:API resource.
+  */
+  public function getTitle(array $resource) {
     $title = '';
+    $data = $resource[self::DATA_KEY];
 
-    if (\array_key_exists(self::TITLE_KEY, $attributes)) {
+    // Priority to Drupal entity labels.
+    if (
+      \array_key_exists(self::ATTR_KEY, $data) &&
+      \array_key_exists(self::LABEL_KEY, $data[self::ATTR_KEY])
+    ) {
+      return $data[self::ATTR_KEY][self::LABEL_KEY];
+    }
+
+    if (
+      \array_key_exists(self::ATTR_KEY, $data) &&
+      \array_key_exists(self::TITLE_KEY, $data[self::ATTR_KEY])
+    ) {
       // Enforce an array of title objects.
-      if (! \array_key_exists(0, $attributes[self::TITLE_KEY])) {
-        $title_array = [$attributes[self::TITLE_KEY]];
+      if (! \array_key_exists(0, $data[self::ATTR_KEY][self::TITLE_KEY])) {
+        $title_array = [$data[self::ATTR_KEY][self::TITLE_KEY]];
       } else {
-        $title_array = $attributes[self::TITLE_KEY];
+        $title_array = $data[self::ATTR_KEY][self::TITLE_KEY];
       }
 
       // Sort the title objects by prefered lang value.
@@ -130,6 +145,112 @@ class JsonDataProcessor {
     }
 
     return $title;
+  }
+
+  /**
+   * Get a resource attribute by key.
+   *
+   * @param array $resource
+   *   An array containing a JSON:API resource data.
+   * @param string $attribute
+   *   The key to a JSON:API resource attribute.
+   *
+   * @return array $result
+   *   The value of the attribute keyed by attribute name.
+   */
+  public function getAttribute(array $resource, string $attribute) {
+    $result = [];
+    $data = $resource[self::DATA_KEY];
+
+    if (
+      \array_key_exists(self::ATTR_KEY, $data) &&
+      \array_key_exists($attribute, $data[self::ATTR_KEY])
+    ) {
+      $result[$attribute] = $data[self::ATTR_KEY][$attribute];
+    }
+
+    return $result;
+  }
+
+  /**
+   * Get a resource link by key.
+   *
+   * @param array $resource
+   *   An array containing a JSON:API resource data.
+   * @param string $link_type
+   *   The JSON:API link type key to extract.
+   *
+   * @return string $link
+   *   The URL of the JSON:API link.
+   */
+  public function getLink(array $resource, string $link_type) {
+    $link = '';
+    $data = $resource[self::DATA_KEY];
+
+    if (
+      \array_key_exists(self::LINKS_KEY, $resource) &&
+      \array_key_exists($link_type, $resource[self::LINKS_KEY])
+    ) {
+      $link = $resource[self::LINKS_KEY][$link_type][self::HREF_KEY];
+    }
+
+    if (
+      $link_type === self::SELF_KEY &&
+      \array_key_exists(self::LINKS_KEY, $data)
+    ) {
+      // Data links should take precedence over resource links.
+      $link = $data[self::LINKS_KEY][$link_type][self::HREF_KEY];
+    }
+
+    return $link;
+  }
+
+  /**
+   * Gather resource collection titles.
+   *
+   * @param array $collection
+   *   An array containing a JSON:API resource collection.
+   *
+   * @return array $titles
+   *   An array of resource titles keyed by resource ID.
+   */
+  public function getTitles($collection) {
+    $titles = [];
+
+    foreach ($collection as $i => $resource) {
+      $id = $this->getId($resource);
+
+      $title = $this->getTitle($resource);
+
+      // Use ID as fallback for missing title.
+      $title = ($title) ? $title : $id;
+
+      $titles[$id] = $title;
+    }
+
+    return $titles;
+  }
+
+  /**
+   * Gather resource collection links.
+   *
+   * @param array $collection
+   *   An array containing a JSON:API resource collection.
+   *
+   * @return array $links
+   *   An array of resource 'self' links keyed by resource ID.
+   */
+  public function getLinks($collection) {
+    $links = [];
+
+    foreach ($collection as $i => $resource) {
+      $id = $resource[self::ID_KEY];
+      $uri = $this->getLink($resource, self::SELF_KEY);
+
+      $links[$id] = $uri;
+    }
+
+    return $links;
   }
 
 }
