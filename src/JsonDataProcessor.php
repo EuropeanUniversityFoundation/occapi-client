@@ -70,7 +70,11 @@ class JsonDataProcessor {
    *   The type of the JSON:API resource.
    */
   public function getType(array $resource) {
-    $type = $resource[Json::DATA_KEY][Json::TYPE_KEY];
+    $data = (\array_key_exists(self::DATA_KEY, $resource)) ?
+      $resource[self::DATA_KEY] :
+      $resource;
+
+    $type = $data[self::TYPE_KEY];
 
     return $type;
   }
@@ -85,7 +89,11 @@ class JsonDataProcessor {
    *   The id of the JSON:API resource.
    */
   public function getId(array $resource) {
-    $id = $resource[Json::DATA_KEY][Json::ID_KEY];
+    $data = (\array_key_exists(self::DATA_KEY, $resource)) ?
+      $resource[self::DATA_KEY] :
+      $resource;
+
+    $id = $data[self::ID_KEY];
 
     return $id;
   }
@@ -101,7 +109,10 @@ class JsonDataProcessor {
   */
   public function getTitle(array $resource) {
     $title = '';
-    $data = $resource[self::DATA_KEY];
+
+    $data = (\array_key_exists(self::DATA_KEY, $resource)) ?
+      $resource[self::DATA_KEY] :
+      $resource;
 
     // Priority to Drupal entity labels.
     if (
@@ -160,7 +171,10 @@ class JsonDataProcessor {
    */
   public function getAttribute(array $resource, string $attribute) {
     $result = [];
-    $data = $resource[self::DATA_KEY];
+
+    $data = (\array_key_exists(self::DATA_KEY, $resource)) ?
+      $resource[self::DATA_KEY] :
+      $resource;
 
     if (
       \array_key_exists(self::ATTR_KEY, $data) &&
@@ -185,7 +199,6 @@ class JsonDataProcessor {
    */
   public function getLink(array $resource, string $link_type) {
     $link = '';
-    $data = $resource[self::DATA_KEY];
 
     if (
       \array_key_exists(self::LINKS_KEY, $resource) &&
@@ -196,9 +209,11 @@ class JsonDataProcessor {
 
     if (
       $link_type === self::SELF_KEY &&
-      \array_key_exists(self::LINKS_KEY, $data)
+      \array_key_exists(self::DATA_KEY, $resource) &&
+      \array_key_exists(self::LINKS_KEY, $resource[self::DATA_KEY])
     ) {
       // Data links should take precedence over resource links.
+      $data = $resource[self::DATA_KEY];
       $link = $data[self::LINKS_KEY][$link_type][self::HREF_KEY];
     }
 
@@ -217,7 +232,9 @@ class JsonDataProcessor {
   public function getTitles($collection) {
     $titles = [];
 
-    foreach ($collection as $i => $resource) {
+    $data = $collection[self::DATA_KEY];
+
+    foreach ($data as $i => $resource) {
       $id = $this->getId($resource);
 
       $title = $this->getTitle($resource);
@@ -243,8 +260,11 @@ class JsonDataProcessor {
   public function getLinks($collection) {
     $links = [];
 
-    foreach ($collection as $i => $resource) {
-      $id = $resource[self::ID_KEY];
+    $data = $collection[self::DATA_KEY];
+
+    foreach ($data as $i => $resource) {
+      $id = $this->getId($resource);
+
       $uri = $this->getLink($resource, self::SELF_KEY);
 
       $links[$id] = $uri;

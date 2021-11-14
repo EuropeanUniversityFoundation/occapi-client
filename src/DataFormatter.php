@@ -51,7 +51,9 @@ class DataFormatter {
 
     $rows = [];
 
-    foreach ($collection as $i => $resource) {
+    $data = $collection[Json::DATA_KEY];
+
+    foreach ($data as $i => $resource) {
       $uri = $this->jsonDataProcessor->getLink($resource, Json::SELF_KEY);
       $options = ['attributes' => ['target' => '_blank']];
 

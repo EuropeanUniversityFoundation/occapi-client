@@ -147,20 +147,17 @@ class OccapiProviderPreviewForm extends EntityForm {
       )
     ) {
       // Prepare Organizational Unit data.
-      $ounit_tempstore = $provider_id . '.' . Manager::OUNIT_KEY;
-      $ounit_endpoint = $hei_data[Json::LINKS_KEY][Manager::OUNIT_KEY][Json::HREF_KEY];
+      $ounit_data = $this->providerManager
+        ->loadOunits($provider_id);
 
-      $ounit_response = $this->jsonDataFetcher
-        ->load($ounit_tempstore, $ounit_endpoint);
-
-      $ounit_data = \json_decode($ounit_response, TRUE);
       $ounit_json = \json_encode(
         $ounit_data[Json::DATA_KEY],
         JSON_PRETTY_PRINT
       );
       $ounit_table = $this->dataFormatter
-        ->collectionTable($ounit_data[Json::DATA_KEY]);
+        ->collectionTable($ounit_data);
 
+      $ounit_endpoint = $hei_data[Json::LINKS_KEY][Manager::OUNIT_KEY][Json::HREF_KEY];
       $ounit_markup = '<p><code>GET ' . $ounit_endpoint . '</code></p>';
       $ounit_markup .= $ounit_table;
 
@@ -196,20 +193,17 @@ class OccapiProviderPreviewForm extends EntityForm {
       )
     ) {
       // Prepare Programme data.
-      $programme_tempstore = $provider_id . '.' . Manager::PROGRAMME_KEY;
-      $programme_endpoint = $hei_data[Json::LINKS_KEY][Manager::PROGRAMME_KEY][Json::HREF_KEY];
+      $programme_data = $this->providerManager
+        ->loadProgrammes($provider_id);
 
-      $programme_response = $this->jsonDataFetcher
-        ->load($programme_tempstore, $programme_endpoint);
-
-      $programme_data = \json_decode($programme_response, TRUE);
       $programme_json = \json_encode(
         $programme_data[Json::DATA_KEY],
         JSON_PRETTY_PRINT
       );
       $programme_table = $this->dataFormatter
-        ->collectionTable($programme_data[Json::DATA_KEY]);
+        ->collectionTable($programme_data);
 
+      $programme_endpoint = $hei_data[Json::LINKS_KEY][Manager::PROGRAMME_KEY][Json::HREF_KEY];
       $programme_markup = '<p><code>GET ' . $programme_endpoint . '</code></p>';
       $programme_markup .= $programme_table;
 
@@ -245,20 +239,17 @@ class OccapiProviderPreviewForm extends EntityForm {
       )
     ) {
       // Prepare Course data.
-      $course_tempstore = $provider_id . '.' . Manager::COURSE_KEY;
-      $course_endpoint = $hei_data[Json::LINKS_KEY][Manager::COURSE_KEY][Json::HREF_KEY];
+      $course_data = $this->providerManager
+        ->loadCourses($provider_id);
 
-      $course_response = $this->jsonDataFetcher
-        ->load($course_tempstore, $course_endpoint);
-
-      $course_data = \json_decode($course_response, TRUE);
       $course_json = \json_encode(
         $course_data[Json::DATA_KEY],
         JSON_PRETTY_PRINT
       );
       $course_table = $this->dataFormatter
-        ->collectionTable($course_data[Json::DATA_KEY]);
+        ->collectionTable($course_data);
 
+      $course_endpoint = $hei_data[Json::LINKS_KEY][Manager::COURSE_KEY][Json::HREF_KEY];
       $course_markup = '<p><code>GET ' . $course_endpoint . '</code></p>';
       $course_markup .= $course_table;
 
@@ -299,10 +290,10 @@ class OccapiProviderPreviewForm extends EntityForm {
       )
     ) {
       $ounit_titles = $this->jsonDataProcessor
-        ->collectionTitles($ounit_data[Json::DATA_KEY]);
+        ->getTitles($ounit_data);
 
       $ounit_links = $this->jsonDataProcessor
-        ->collectionLinks($ounit_data[Json::DATA_KEY]);
+        ->getLinks($ounit_data);
 
       // Select ounit to display programme data.
       $form['ounit_programme_wrapper'] = [
@@ -378,10 +369,10 @@ class OccapiProviderPreviewForm extends EntityForm {
       )
     ) {
       $programme_titles = $this->jsonDataProcessor
-        ->collectionTitles($programme_data[Json::DATA_KEY]);
+        ->getTitles($programme_data);
 
       $programme_links = $this->jsonDataProcessor
-        ->collectionLinks($programme_data[Json::DATA_KEY]);
+        ->getLinks($programme_data);
 
       // Select programme to display course data.
       $form['programme_course_wrapper'] = [
@@ -449,22 +440,13 @@ class OccapiProviderPreviewForm extends EntityForm {
 
     if ($ounit_id) {
       // OUnit resource data.
-      $ounit_tempstore = $this->entity->id() . '.' . Manager::OUNIT_KEY;
-      $ounit_tempstore .= '.' . $ounit_id;
+      $ounit_data = $this->providerManager
+        ->loadOunit($this->entity->id(), $ounit_id);
 
-      $ounit_links = $form_state->getValue('ounit_programme_links');
-      $ounit_uri = $ounit_links[$ounit_id];
-
-      $message = $this->t('Retrieving ounit with ID: ') . $ounit_id;
-      $this->logger->notice($message);
-
-      $ounit_response = $this->jsonDataFetcher
-        ->load($ounit_tempstore, $ounit_uri);
-
-      $ounit_data = \json_decode($ounit_response, TRUE);
       $ounit_table = $this->dataFormatter
         ->resourceTable($ounit_data);
 
+      $ounit_uri = $ounit_data[Json::LINKS_KEY][Json::SELF_KEY][Json::HREF_KEY];
       $ounit_markup = '<p><code>GET ' . $ounit_uri . '</code></p>';
       $ounit_markup .= $ounit_table;
 
@@ -477,18 +459,13 @@ class OccapiProviderPreviewForm extends EntityForm {
         )
       ) {
         // Programme collection data.
-        $programme_tempstore = $this->entity->id() . '.' . Manager::OUNIT_KEY;
-        $programme_tempstore .= '.' . $ounit_id . '.' . Manager::PROGRAMME_KEY;
+        $programme_data = $this->providerManager
+          ->loadOunitProgrammes($this->entity->id(), $ounit_id);
+
+        $programme_table = $this->dataFormatter
+          ->collectionTable($programme_data);
 
         $programme_endpoint = $ounit_data[Json::LINKS_KEY][Manager::PROGRAMME_KEY][Json::HREF_KEY];
-
-        $programme_response = $this->jsonDataFetcher
-          ->load($programme_tempstore, $programme_endpoint);
-
-        $programme_data = \json_decode($programme_response, TRUE);
-        $programme_table = $this->dataFormatter
-          ->collectionTable($programme_data[Json::DATA_KEY]);
-
         $programme_markup = '<p><code>GET ' . $programme_endpoint . '</code></p>';
         $programme_markup .= $programme_table;
 
@@ -512,22 +489,13 @@ class OccapiProviderPreviewForm extends EntityForm {
 
     if ($ounit_id) {
       // OUnit resource data.
-      $ounit_tempstore = $this->entity->id() . '.' . Manager::OUNIT_KEY;
-      $ounit_tempstore .= '.' . $ounit_id;
+      $ounit_data = $this->providerManager
+        ->loadOunit($this->entity->id(), $ounit_id);
 
-      $ounit_links = $form_state->getValue('ounit_course_links');
-      $ounit_uri = $ounit_links[$ounit_id];
-
-      $message = $this->t('Retrieving ounit with ID: ') . $ounit_id;
-      $this->logger->notice($message);
-
-      $ounit_response = $this->jsonDataFetcher
-        ->load($ounit_tempstore, $ounit_uri);
-
-      $ounit_data = \json_decode($ounit_response, TRUE);
       $ounit_table = $this->dataFormatter
         ->resourceTable($ounit_data);
 
+      $ounit_uri = $ounit_data[Json::LINKS_KEY][Json::SELF_KEY][Json::HREF_KEY];
       $ounit_markup = '<p><code>GET ' . $ounit_uri . '</code></p>';
       $ounit_markup .= $ounit_table;
 
@@ -540,18 +508,13 @@ class OccapiProviderPreviewForm extends EntityForm {
         )
       ) {
         // Course collection data.
-        $course_tempstore = $this->entity->id() . '.' . Manager::OUNIT_KEY;
-        $course_tempstore .= '.' . $ounit_id . '.' . Manager::COURSE_KEY;
+        $course_data = $this->providerManager
+          ->loadOunitCourses($this->entity->id(), $ounit_id);
+
+        $course_table = $this->dataFormatter
+          ->collectionTable($course_data);
 
         $course_endpoint = $ounit_data[Json::LINKS_KEY][Manager::COURSE_KEY][Json::HREF_KEY];
-
-        $course_response = $this->jsonDataFetcher
-          ->load($course_tempstore, $course_endpoint);
-
-        $course_data = \json_decode($course_response, TRUE);
-        $course_table = $this->dataFormatter
-          ->collectionTable($course_data[Json::DATA_KEY]);
-
         $course_markup = '<p><code>GET ' . $course_endpoint . '</code></p>';
         $course_markup .= $course_table;
 
@@ -574,23 +537,13 @@ class OccapiProviderPreviewForm extends EntityForm {
     $programme_id = $form_state->getValue('programme_course_select');
 
     if ($programme_id) {
-      // Programme resource data.
-      $programme_tempstore = $this->entity->id() . '.' . Manager::PROGRAMME_KEY;
-      $programme_tempstore .= '.' . $programme_id;
+      $programme_data = $this->providerManager
+        ->loadProgramme($this->entity->id(), $programme_id);
 
-      $programme_links = $form_state->getValue('programme_course_links');
-      $programme_uri = $programme_links[$programme_id];
-
-      $message = $this->t('Retrieving programme with ID: ') . $programme_id;
-      $this->logger->notice($message);
-
-      $programme_response = $this->jsonDataFetcher
-        ->load($programme_tempstore, $programme_uri);
-
-      $programme_data = \json_decode($programme_response, TRUE);
       $programme_table = $this->dataFormatter
         ->resourceTable($programme_data);
 
+      $programme_uri = $programme_data[Json::LINKS_KEY][Json::SELF_KEY][Json::HREF_KEY];
       $programme_markup = '<p><code>GET ' . $programme_uri . '</code></p>';
       $programme_markup .= $programme_table;
 
@@ -603,18 +556,13 @@ class OccapiProviderPreviewForm extends EntityForm {
         )
       ) {
         // Course collection data.
-        $course_tempstore = $this->entity->id() . '.' . Manager::PROGRAMME_KEY;
-        $course_tempstore .= '.' . $programme_id . '.' . Manager::COURSE_KEY;
+        $course_data = $this->providerManager
+          ->loadProgrammeCourses($this->entity->id(), $programme_id);
+
+        $course_table = $this->dataFormatter
+          ->collectionTable($course_data);
 
         $course_endpoint = $programme_data[Json::LINKS_KEY][Manager::COURSE_KEY][Json::HREF_KEY];
-
-        $course_response = $this->jsonDataFetcher
-          ->load($course_tempstore, $course_endpoint);
-
-        $course_data = \json_decode($course_response, TRUE);
-        $course_table = $this->dataFormatter
-          ->collectionTable($course_data[Json::DATA_KEY]);
-
         $course_markup = '<p><code>GET ' . $course_endpoint . '</code></p>';
         $course_markup .= $course_table;
 
