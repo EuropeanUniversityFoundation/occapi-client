@@ -2,6 +2,9 @@ services:
   occapi_client.fetch:
     class: Drupal\occapi_client\JsonDataFetcher
     arguments: ['@http_client', '@occapi_client.json', '@logger.factory', '@tempstore.shared', '@string_translation']
+  occapi_client.field_manager:
+    class: Drupal\occapi_client\OccapiFieldManager
+    arguments: []
   occapi_client.format:
     class: Drupal\occapi_client\DataFormatter
     arguments: ['@occapi_client.json', '@string_translation']
