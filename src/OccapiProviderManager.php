@@ -135,7 +135,7 @@ class OccapiProviderManager {
    * @param string $id
    *   The OCCAPI provider ID.
    *
-   * @return \Drupal\occapi_client\Entity\OccapiProvider
+   * @return \Drupal\occapi_client\Entity\OccapiProvider|NULL
    */
   public function getProvider(string $id): ?OccapiProvider {
     $provider = NULL;

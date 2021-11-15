@@ -59,7 +59,7 @@ class DataFormatter {
    * @return string
    *   Rendered table markup.
    */
-  public function collectionTable($collection): string {
+  public function collectionTable(array $collection): string {
     $header = [
       Json::TYPE_KEY,
       Json::ID_KEY,
@@ -97,13 +97,13 @@ class DataFormatter {
   /**
    * Format single resource as HTML table.
    *
-   * @param array $collection
+   * @param array $resource
    *   An array containing a JSON:API resource collection.
    *
    * @return string
    *   Rendered table markup.
    */
-  public function resourceTable($resource): string {
+  public function resourceTable(array $resource): string {
     $header = [
       Json::TYPE_KEY,
       Json::ID_KEY,
@@ -145,13 +145,13 @@ class DataFormatter {
   /**
    * Format single Programme resource as HTML table.
    *
-   * @param array $collection
+   * @param array $resource
    *   An array containing a JSON:API resource collection.
    *
    * @return string
    *   Rendered table markup.
    */
-  public function programmeResourceTable($resource): string {
+  public function programmeResourceTable(array $resource): string {
     $programme_fields = OccapiFieldManager::getProgrammeFields();
 
     foreach ($programme_fields as $key => $value) {
@@ -213,7 +213,7 @@ class DataFormatter {
    * @return string
    *   Rendered table markup.
    */
-  public function courseCollectionTable($collection): string {
+  public function courseCollectionTable(array $collection): string {
     $course_fields = OccapiFieldManager::getCourseFields();
 
     foreach ($course_fields as $key => $value) {

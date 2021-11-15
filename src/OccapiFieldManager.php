@@ -152,7 +152,7 @@ class OccapiFieldManager {
    * @return array
    *   An array of fields (as keys) and types (as values).
    */
-  public static function getCourseExtraFields() {
+  public static function getCourseExtraFields(): array {
     $fields = [
       'bibliography' => [
         'multiline'           => 'string',
