@@ -252,7 +252,7 @@ class OccapiImportForm extends FormBase {
         'disabled' => [
           ':input[name="programme_select"]' => ['value' => ''],
         ],
-        'visible' => [
+        'invisible' => [
           ':input[name="data_status"]' => ['value' => ''],
         ],
       ],
@@ -417,7 +417,7 @@ class OccapiImportForm extends FormBase {
           ->loadProgrammeCourses($provider_id, $programme_id);
 
         $course_markup = $this->dataFormatter
-          ->collectionTable($course_collection);
+          ->courseCollectionTable($course_collection);
 
         $markup .= '<h3>' . $this->t('Course data') . '</h3>';
         $markup .= $course_markup;
