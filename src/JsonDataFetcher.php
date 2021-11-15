@@ -76,12 +76,22 @@ class JsonDataFetcher {
   }
 
   /**
-   * Load JSON:API data from tempstore or external API
+   * Load JSON:API data from tempstore or external API.
+   *
+   * @param string $temp_store_key
+   *   A key from the key_value_expire table.
+   * @param string $endpoint
+   *   The endpoint from which to fetch data.
+   * @param boolean $refresh
+   *   Whether to force a refresh of the stored data.
+   *
+   * @return string|NULL
+   *   A string containing the stored data or NULL.
    */
-  public function load($temp_store_key, $endpoint, $refresh = FALSE) {
-    // If tempstore is empty OR should be refreshed
+  public function load(string $temp_store_key, string $endpoint, bool $refresh = FALSE): ?string {
+    // If tempstore is empty OR should be refreshed.
     if (empty($this->tempStore->get($temp_store_key)) || $refresh) {
-      // Get the data from the provided endpoint and store it
+      // Get the data from the provided endpoint and store it.
       $this->tempStore->set($temp_store_key, $this->get($endpoint));
       $message = $this->t("Loaded @key into temporary storage", [
         '@key' => $temp_store_key
@@ -89,20 +99,26 @@ class JsonDataFetcher {
       $this->logger->notice($message);
     }
 
-    // Return whatever is in storage
+    // Return whatever is in storage.
     return $this->tempStore->get($temp_store_key);
   }
 
   /**
-   * Get JSON:API data from an external API endpoint
+   * Get JSON:API data from an external API endpoint.
+   *
+   * @param string $endpoint
+   *   The endpoint from which to fetch data.
+   *
+   * @return string
+   *   A string containing JSON data.
    */
-  public function get($endpoint) {
-    // Prepare the JSON string
+  public function get(string $endpoint): string {
+    // Prepare the JSON string.
     $json_data = '';
 
     $response = NULL;
 
-    // Build the HTTP request
+    // Build the HTTP request.
     try {
       $request = $this->httpClient->get($endpoint);
       $response = $request->getBody();
@@ -113,20 +129,26 @@ class JsonDataFetcher {
     }
 
     // if ($this->jsonDataProcessor->validate($response)) {
-      // Extract the data from the Guzzle Stream
+      // Extract the data from the Guzzle Stream.
       $decoded = json_decode($response, TRUE);
-      // Encode the data for persistency
+      // Encode the data for persistency.
       $json_data = json_encode($decoded);
     // }
 
-    // Return the data
+    // Return the data.
     return $json_data;
   }
 
   /**
-   * Check the tempstore for the updated date
+   * Check the tempstore for the updated date.
+   *
+   * @param string $temp_store_key
+   *   A key from the key_value_expire table.
+   *
+   * @return int|NULL
+   *   A UNIX timestamp or NULL.
    */
-  public function checkUpdated($temp_store_key) {
+  public function checkUpdated(string $temp_store_key): ?int {
     if (!empty($this->tempStore->get($temp_store_key))) {
       return $this->tempStore->getMetadata($temp_store_key)->getUpdated();
     } else {
@@ -135,9 +157,17 @@ class JsonDataFetcher {
   }
 
   /**
-   * Get the updated value from an endpoint
+   * Get the updated value from an endpoint.
+   *
+   * @param string $temp_store_key
+   *   A key from the key_value_expire table.
+   * @param string $endpoint
+   *   The endpoint from which to fetch data.
+   *
+   * @return string|NULL
+   *   A string containing the stored data or NULL.
    */
-  public function getUpdated($temp_store_key, $endpoint) {
+  public function getUpdated(string $temp_store_key, string $endpoint): ?string {
     // Check when this item was last updated
     $item_updated = $this->checkUpdated($temp_store_key);
 

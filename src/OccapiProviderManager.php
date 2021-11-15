@@ -9,6 +9,7 @@ use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\occapi_client\DataFormatter;
+use Drupal\occapi_client\Entity\OccapiProvider;
 use Drupal\occapi_client\JsonDataFetcher;
 use Drupal\occapi_client\JsonDataProcessor as Json;
 
@@ -117,8 +118,10 @@ class OccapiProviderManager {
 
   /**
    * Get a list of OCCAPI providers.
+   *
+   * @return \Drupal\occapi_client\Entity\OccapiProvider[]
    */
-  public function getProviders() {
+  public function getProviders(): array {
     $providers = $this->entityTypeManager
       ->getStorage(self::ENTITY_TYPE)
       ->loadMultiple();
@@ -128,12 +131,20 @@ class OccapiProviderManager {
 
   /**
    * Get an OCCAPI provider by ID.
+   *
+   * @param string $id
+   *   The OCCAPI provider ID.
+   *
+   * @return \Drupal\occapi_client\Entity\OccapiProvider
    */
-  public function getProvider(string $id) {
+  public function getProvider(string $id): ?OccapiProvider {
+    $provider = NULL;
+
     $providers = $this->entityTypeManager
       ->getStorage(self::ENTITY_TYPE)
       ->loadByProperties(['id' => $id]);
 
+    // The providers array will contain one item at most.
     foreach ($providers as $id => $object) {
       $provider = $object;
     }
@@ -150,7 +161,7 @@ class OccapiProviderManager {
   * @return array $data
   *   An array containing the JSON:API Institution resource data.
   */
-  public function loadInstitution(string $provider_id) {
+  public function loadInstitution(string $provider_id): array {
     $provider = $this->getProvider($provider_id);
 
     $hei_id   = $provider->get('hei_id');
@@ -179,7 +190,7 @@ class OccapiProviderManager {
    * @return array $collection
    *   An array containing the JSON:API resource collection data.
    */
-  private function loadCollection(string $provider_id, string $type) {
+  private function loadCollection(string $provider_id, string $type): array {
     $provider = $this->getProvider($provider_id);
 
     if (
@@ -232,7 +243,7 @@ class OccapiProviderManager {
    * @return array $collection
    *   An array containing the JSON:API resource collection data.
    */
-  private function loadFilteredCollection(string $provider_id, string $filter_type, string $filter_id, string $type) {
+  private function loadFilteredCollection(string $provider_id, string $filter_type, string $filter_id, string $type): array {
     $provider = $this->getProvider($provider_id);
 
     if (
@@ -287,7 +298,7 @@ class OccapiProviderManager {
    * @return array $resource
    *   An array containing the JSON:API resource data.
    */
-  private function loadResource(string $provider_id, string $type, string $id) {
+  private function loadResource(string $provider_id, string $type, string $id): array {
     $collection = $this->loadCollection($provider_id, $type);
 
     if (
@@ -306,6 +317,7 @@ class OccapiProviderManager {
 
     if (empty($this->jsonDataFetcher->checkUpdated($tempstore))) {
       foreach ($data as $i => $resource) {
+        // Only one item at most will pass this check.
         if ($this->jsonDataProcessor->getId($resource) === $id) {
           $endpoint = $this->jsonDataProcessor
             ->getLink($resource, Json::SELF_KEY);
@@ -333,7 +345,7 @@ class OccapiProviderManager {
    *
    * @return array
    */
-  public function loadOunits(string $provider_id) {
+  public function loadOunits(string $provider_id): array {
     return $this->loadCollection($provider_id, self::OUNIT_KEY);
   }
 
@@ -347,7 +359,7 @@ class OccapiProviderManager {
    *
    * @return array
    */
-  public function loadOunit(string $provider_id, string $id) {
+  public function loadOunit(string $provider_id, string $id): array {
     return $this->loadResource($provider_id, self::OUNIT_KEY, $id);
   }
 
@@ -359,7 +371,7 @@ class OccapiProviderManager {
    *
    * @return array
    */
-  public function loadProgrammes(string $provider_id) {
+  public function loadProgrammes(string $provider_id): array {
     return $this->loadCollection($provider_id, self::PROGRAMME_KEY);
   }
 
@@ -373,7 +385,7 @@ class OccapiProviderManager {
    *
    * @return array
    */
-  public function loadOunitProgrammes(string $provider_id, string $ounit_id) {
+  public function loadOunitProgrammes(string $provider_id, string $ounit_id): array {
     return $this->loadFilteredCollection($provider_id, self::OUNIT_KEY, $ounit_id, self::PROGRAMME_KEY);
   }
 
@@ -387,7 +399,7 @@ class OccapiProviderManager {
    *
    * @return array
    */
-  public function loadProgramme(string $provider_id, string $id) {
+  public function loadProgramme(string $provider_id, string $id): array {
     return $this->loadResource($provider_id, self::PROGRAMME_KEY, $id);
   }
 
@@ -399,7 +411,7 @@ class OccapiProviderManager {
    *
    * @return array
    */
-  public function loadCourses(string $provider_id) {
+  public function loadCourses(string $provider_id): array {
     return $this->loadCollection($provider_id, self::COURSE_KEY);
   }
 
@@ -413,7 +425,7 @@ class OccapiProviderManager {
    *
    * @return array
    */
-  public function loadOunitCourses(string $provider_id, string $ounit_id) {
+  public function loadOunitCourses(string $provider_id, string $ounit_id): array {
     return $this->loadFilteredCollection($provider_id, self::OUNIT_KEY, $ounit_id, self::COURSE_KEY);
   }
 
@@ -427,7 +439,7 @@ class OccapiProviderManager {
    *
    * @return array
    */
-  public function loadProgrammeCourses(string $provider_id, string $programme_id) {
+  public function loadProgrammeCourses(string $provider_id, string $programme_id): array {
     return $this->loadFilteredCollection($provider_id, self::PROGRAMME_KEY, $programme_id, self::COURSE_KEY);
   }
 
@@ -441,7 +453,7 @@ class OccapiProviderManager {
    *
    * @return array
    */
-  public function loadCourse(string $provider_id, string $id) {
+  public function loadCourse(string $provider_id, string $id): array {
     return $this->loadResource($provider_id, self::COURSE_KEY, $id);
   }
 

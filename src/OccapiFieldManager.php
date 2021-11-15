@@ -38,7 +38,7 @@ class OccapiFieldManager {
    * @return array
    *   An array of fields (as keys) and types (as values).
    */
-  public static function getHeiFields() {
+  public static function getHeiFields(): array {
     $fields = [
       'title' => [
         'string'      => 'string',
@@ -61,7 +61,7 @@ class OccapiFieldManager {
    * @return array
    *   An array of fields (as keys) and types (as values).
    */
-  public static function getOunitFields() {
+  public static function getOunitFields(): array {
     $fields = [
       'title' => [
         'string'      => 'string',
@@ -85,7 +85,7 @@ class OccapiFieldManager {
    * @return array
    *   An array of fields (as keys) and types (as values).
    */
-  public static function getProgrammeFields() {
+  public static function getProgrammeFields(): array {
     $fields = [
       'title' => [
         'string'              => 'string',
@@ -116,7 +116,7 @@ class OccapiFieldManager {
    * @return array
    *   An array of fields (as keys) and types (as values).
    */
-  public static function getCourseFields() {
+  public static function getCourseFields(): array {
     $fields = [
       'title' => [
         'string'              => 'string',

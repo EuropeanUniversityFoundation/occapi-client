@@ -71,7 +71,7 @@ class JsonDataProcessor {
    * @return string $type
    *   The type of the JSON:API resource.
    */
-  public function getType(array $resource) {
+  public function getType(array $resource): string {
     $data = (\array_key_exists(self::DATA_KEY, $resource)) ?
       $resource[self::DATA_KEY] :
       $resource;
@@ -90,7 +90,7 @@ class JsonDataProcessor {
    * @return string $id
    *   The id of the JSON:API resource.
    */
-  public function getId(array $resource) {
+  public function getId(array $resource): string {
     $data = (\array_key_exists(self::DATA_KEY, $resource)) ?
       $resource[self::DATA_KEY] :
       $resource;
@@ -109,7 +109,7 @@ class JsonDataProcessor {
   * @return string $title
   *   The title attribute of the JSON:API resource.
   */
-  public function getTitle(array $resource) {
+  public function getTitle(array $resource): string {
     $title = '';
 
     $data = (\array_key_exists(self::DATA_KEY, $resource)) ?
@@ -171,7 +171,7 @@ class JsonDataProcessor {
    * @return array $result
    *   The value of the attribute keyed by attribute name.
    */
-  public function getAttribute(array $resource, string $attribute) {
+  public function getAttribute(array $resource, string $attribute): array {
     $result = [];
 
     $data = (\array_key_exists(self::DATA_KEY, $resource)) ?
@@ -199,7 +199,7 @@ class JsonDataProcessor {
    * @return string $link
    *   The URL of the JSON:API link.
    */
-  public function getLink(array $resource, string $link_type) {
+  public function getLink(array $resource, string $link_type): string {
     $link = '';
 
     if (
@@ -231,7 +231,7 @@ class JsonDataProcessor {
    * @return array $titles
    *   An array of resource titles keyed by resource ID.
    */
-  public function getTitles($collection) {
+  public function getTitles(array $collection): array {
     $titles = [];
 
     $data = $collection[self::DATA_KEY];
@@ -259,7 +259,7 @@ class JsonDataProcessor {
    * @return array $links
    *   An array of resource 'self' links keyed by resource ID.
    */
-  public function getLinks($collection) {
+  public function getLinks(array $collection): array {
     $links = [];
 
     $data = $collection[self::DATA_KEY];

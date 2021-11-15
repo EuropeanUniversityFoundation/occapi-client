@@ -35,6 +35,8 @@ class DataFormatter {
    *
    * @param \Drupal\occapi_client\JsonDataProcessor $json_data_processor
    *   JSON data fetching service.
+   * @param \Drupal\occapi_client\OccapiFieldManager $field_manager
+   *   OCCAPI field manager service.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
    */
@@ -50,8 +52,14 @@ class DataFormatter {
 
   /**
    * Format resource collection as HTML table.
+   *
+   * @param array $collection
+   *   An array containing a JSON:API resource collection.
+   *
+   * @return string
+   *   Rendered table markup.
    */
-  public function collectionTable($collection) {
+  public function collectionTable($collection): string {
     $header = [
       Json::TYPE_KEY,
       Json::ID_KEY,
@@ -88,8 +96,14 @@ class DataFormatter {
 
   /**
    * Format single resource as HTML table.
+   *
+   * @param array $collection
+   *   An array containing a JSON:API resource collection.
+   *
+   * @return string
+   *   Rendered table markup.
    */
-  public function resourceTable($resource) {
+  public function resourceTable($resource): string {
     $header = [
       Json::TYPE_KEY,
       Json::ID_KEY,
@@ -130,8 +144,14 @@ class DataFormatter {
 
   /**
    * Format single Programme resource as HTML table.
+   *
+   * @param array $collection
+   *   An array containing a JSON:API resource collection.
+   *
+   * @return string
+   *   Rendered table markup.
    */
-  public function programmeResourceTable($resource) {
+  public function programmeResourceTable($resource): string {
     $programme_fields = OccapiFieldManager::getProgrammeFields();
 
     foreach ($programme_fields as $key => $value) {
@@ -186,8 +206,14 @@ class DataFormatter {
 
   /**
    * Format Course resource collection as HTML table.
+   *
+   * @param array $collection
+   *   An array containing a JSON:API resource collection.
+   *
+   * @return string
+   *   Rendered table markup.
    */
-  public function courseCollectionTable($collection) {
+  public function courseCollectionTable($collection): string {
     $course_fields = OccapiFieldManager::getCourseFields();
 
     foreach ($course_fields as $key => $value) {
