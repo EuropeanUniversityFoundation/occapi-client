@@ -54,6 +54,13 @@ class OccapiImportForm extends FormBase {
   protected $courseCollection;
 
   /**
+   * Empty data placeholder.
+   *
+   * @var string
+   */
+  protected $emptyData;
+
+  /**
    * Data formatter service.
    *
    * @var \Drupal\occapi_client\DataFormatter
@@ -196,8 +203,11 @@ class OccapiImportForm extends FormBase {
       '#weight' => '-8',
     ];
 
+    $this->emptyData = $this->t('Nothing to display.');
+
     $form['data'] = [
-      '#type' => 'fieldset',
+      '#type' => 'details',
+      '#open' => TRUE,
       '#title' => $this->t('Data'),
       '#prefix' => '<div id="data">',
       '#suffix' => '</div>',
@@ -214,7 +224,15 @@ class OccapiImportForm extends FormBase {
 
     $form['data']['preview'] = [
       '#type' => 'markup',
-      '#markup' => '<p><em>' . $this->t('Nothing to display.') . '</em></p>',
+      '#markup' => '<p><em>' . $this->emptyData . '</em></p>',
+    ];
+
+    $target = '#programmeSelect';
+    $link_text = $this->t('Back to top');
+
+    $form['data']['back_to_top'] = [
+      '#type' => 'markup',
+      '#markup' => '<p><a href="' . $target . '">' . $link_text . '</a></p>',
     ];
 
     $form['actions'] = [
@@ -334,13 +352,13 @@ class OccapiImportForm extends FormBase {
           $ounit_title  = $this->jsonDataProcessor->getTitle($resource);
           $ounit_label  = $ounit_title . ' (' . $ounit_id . ')';
 
-          $ounit_full   = $this->providerManager
+          $ounit_resource   = $this->providerManager
             ->loadOunit($provider_id, $ounit_id);
 
           if (
             array_key_exists(
               Manager::PROGRAMME_KEY,
-              $ounit_full[Json::LINKS_KEY]
+              $ounit_resource[Json::LINKS_KEY]
             )
           ) {
             $ounit_programmes = $this->providerManager
@@ -370,6 +388,43 @@ class OccapiImportForm extends FormBase {
   * Fetch the data and preview Programme
   */
   public function previewProgramme(array $form, FormStateInterface $form_state) {
+    $markup ='';
+
+    $provider_id = $form_state->getValue('provider_select');
+
+    $programme_id = $form_state->getValue('programme_select');
+
+    $form['data']['status'] = $programme_id;
+    $form['data']['preview']['#markup'] = $this->emptyData;
+
+    if (! empty($provider_id) && !empty($programme_id)) {
+      $programme_resource = $this->providerManager
+        ->loadProgramme($provider_id, $programme_id);
+
+      $programme_markup = $this->dataFormatter
+        ->resourceTable($programme_resource);
+
+      $markup .= '<h3>' . $this->t('Programme data') . '</h3>';
+      $markup .= $programme_markup;
+
+      if (
+        \array_key_exists(
+          Manager::COURSE_KEY,
+          $programme_resource[Json::LINKS_KEY]
+        )
+      ) {
+        $course_collection = $this->providerManager
+          ->loadProgrammeCourses($provider_id, $programme_id);
+
+        $course_markup = $this->dataFormatter
+          ->collectionTable($course_collection);
+
+        $markup .= '<h3>' . $this->t('Course data') . '</h3>';
+        $markup .= $course_markup;
+      }
+    }
+
+    $form['data']['preview']['#markup'] = $markup;
 
     return $form['data'];
   }
