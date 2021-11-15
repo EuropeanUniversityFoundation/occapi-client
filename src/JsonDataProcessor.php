@@ -26,7 +26,9 @@ class JsonDataProcessor {
 
   // OCCAPI title field.
   const TITLE_KEY = 'title';
-  const VALUE_KEY = 'string';
+  const STR_KEY   = 'string';
+  const MLSTR_KEY = 'multiline';
+  const URI_KEY   = 'uri';
   const LANG_KEY  = 'lang';
   const LANG_PREF = 'en';
 
@@ -151,7 +153,7 @@ class JsonDataProcessor {
       }
 
       if (count($title_ordered) > 0) {
-        $title = $title_ordered[0][self::VALUE_KEY];
+        $title = $title_ordered[0][self::STR_KEY];
       }
     }
 

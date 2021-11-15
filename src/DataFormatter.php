@@ -7,6 +7,7 @@ use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\Link;
 use Drupal\Core\Url;
 use Drupal\occapi_client\JsonDataProcessor as Json;
+use Drupal\occapi_client\OccapiFieldManager as Fields;
 
 /**
  * Service for data formatting
@@ -23,6 +24,13 @@ class DataFormatter {
   protected $jsonDataProcessor;
 
   /**
+  * OCCAPI field manager service.
+  *
+  * @var \Drupal\occapi_client\OccapiFieldManager
+  */
+  protected $fieldManager;
+
+  /**
    * Constructs a new DataFormatter.
    *
    * @param \Drupal\occapi_client\JsonDataProcessor $json_data_processor
@@ -32,10 +40,12 @@ class DataFormatter {
    */
   public function __construct(
     JsonDataProcessor $json_data_processor,
+    OccapiFieldManager $field_manager,
     TranslationInterface $string_translation
   ) {
-    $this->jsonDataProcessor = $json_data_processor;
-    $this->stringTranslation = $string_translation;
+    $this->jsonDataProcessor  = $json_data_processor;
+    $this->fieldManager       = $field_manager;
+    $this->stringTranslation  = $string_translation;
   }
 
   /**
@@ -105,6 +115,50 @@ class DataFormatter {
     foreach ($resource[Json::LINKS_KEY] as $key => $link) {
       $uri = $link[Json::HREF_KEY];
       $row[] = Link::fromTextAndUrl($key, Url::fromUri($uri, $options));
+    }
+
+    $rows[] = $row;
+
+    $build['table'] = [
+      '#type' => 'table',
+      '#header' => $header,
+      '#rows' => $rows,
+    ];
+
+    return render($build);
+  }
+
+  /**
+   * Format single Programme resource as HTML table.
+   */
+  public function programmeResourceTable($resource) {
+    $programme_fields = OccapiFieldManager::getProgrammeFields();
+
+    foreach ($programme_fields as $key => $value) {
+      if (
+        \is_array($value) && (
+          \array_key_exists(Json::MLSTR_KEY, $value) ||
+          \array_key_exists(Json::URI_KEY, $value)
+        )
+      ) {
+        // Exclude long text and link fields.
+        unset($programme_fields[$key]);
+      }
+    }
+
+    $header = \array_keys($programme_fields);
+
+    $rows = [];
+
+    foreach ($programme_fields as $key => $value) {
+      if ($key === Json::TITLE_KEY) {
+        $title = $this->jsonDataProcessor->getTitle($resource);
+        \Drupal::logger('occapi_entities_bridge')->notice($title);
+        $row[] = $title;
+      } else {
+        $attribute = $this->jsonDataProcessor->getAttribute($resource, $key);
+        $row[] = $attribute[$key];
+      }
     }
 
     $rows[] = $row;

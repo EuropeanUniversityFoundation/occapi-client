@@ -402,7 +402,7 @@ class OccapiImportForm extends FormBase {
         ->loadProgramme($provider_id, $programme_id);
 
       $programme_markup = $this->dataFormatter
-        ->resourceTable($programme_resource);
+        ->programmeResourceTable($programme_resource);
 
       $markup .= '<h3>' . $this->t('Programme data') . '</h3>';
       $markup .= $programme_markup;
