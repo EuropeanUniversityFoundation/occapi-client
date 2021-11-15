@@ -135,8 +135,6 @@ class OccapiImportForm extends FormBase {
       ];
     }
 
-    $this->logger->notice('Building form...');
-
     // Load all available OCCAPI providers.
     $providers = $this->providerManager
       ->getProviders();
@@ -177,7 +175,7 @@ class OccapiImportForm extends FormBase {
 
     $form['header']['programme_select'] = [
       '#type' => 'select',
-      '#title' => $this->t('Programme'),
+      '#title' => $this->t('Programmes'),
       '#prefix' => '<div id="programmeSelect">',
       '#suffix' => '</div>',
       '#options' => [],
@@ -303,7 +301,7 @@ class OccapiImportForm extends FormBase {
       $this->heiResource = $this->providerManager
         ->loadInstitution($provider_id);
 
-      // Fetch Programme data.
+      // Fetch Programme data from Institution resource links.
       if (
         ! $this->provider->get('ounit_filter') &&
         array_key_exists(
@@ -311,16 +309,55 @@ class OccapiImportForm extends FormBase {
           $this->heiResource[Json::LINKS_KEY]
         )
       ) {
-        $programme_tempstore = $provider_id . '.' . Manager::PROGRAMME_KEY;
-        $programme_endpoint = $this->heiResource[Json::LINKS_KEY][Manager::PROGRAMME_KEY][Json::HREF_KEY];
-
-        $programme_response = $this->jsonDataFetcher
-          ->load($programme_tempstore, $programme_endpoint);
-
-        $this->programmeCollection = \json_decode($programme_response, TRUE);
+        $this->programmeCollection = $this->providerManager
+          ->loadProgrammes($provider_id);
 
         $options += $this->jsonDataProcessor
-          ->collectionTitles($this->programmeCollection[Json::DATA_KEY]);
+          ->getTitles($this->programmeCollection);
+      }
+
+      // Fetch Programme data from all available OUnit resource links.
+      if (
+        $this->provider->get('ounit_filter') &&
+        array_key_exists(
+          Manager::OUNIT_KEY,
+          $this->heiResource[Json::LINKS_KEY]
+        )
+      ) {
+        $this->programmeCollection = [Json::DATA_KEY => []];
+
+        $this->ounitCollection = $this->providerManager
+          ->loadOunits($provider_id);
+
+        foreach ($this->ounitCollection[Json::DATA_KEY] as $i => $resource) {
+          $ounit_id     = $this->jsonDataProcessor->getId($resource);
+          $ounit_title  = $this->jsonDataProcessor->getTitle($resource);
+          $ounit_label  = $ounit_title . ' (' . $ounit_id . ')';
+
+          $ounit_full   = $this->providerManager
+            ->loadOunit($provider_id, $ounit_id);
+
+          if (
+            array_key_exists(
+              Manager::PROGRAMME_KEY,
+              $ounit_full[Json::LINKS_KEY]
+            )
+          ) {
+            $ounit_programmes = $this->providerManager
+              ->loadOunitProgrammes($provider_id, $ounit_id);
+
+            if (! empty($ounit_programmes[Json::DATA_KEY])) {
+              $partial_data = $ounit_programmes[Json::DATA_KEY];
+              $this->programmeCollection[Json::DATA_KEY] += $partial_data;
+
+              $programme_titles = $this->jsonDataProcessor
+                ->getTitles($ounit_programmes);
+
+              $options[$ounit_label] = $programme_titles;
+            }
+          }
+        }
+
       }
 
       $form['header']['programme_select']['#options'] = $options;
