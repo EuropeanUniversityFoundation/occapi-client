@@ -1,5 +1,5 @@
-occapi_entities_bridge.import:
-  route_name: occapi_entities_bridge.import
+occapi_entities_bridge.select:
+  route_name: occapi_entities_bridge.select
   title: 'Import OCCAPI entities'
   appears_on:
     - entity.occapi_provider.collection

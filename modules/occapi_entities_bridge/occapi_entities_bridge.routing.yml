@@ -6,11 +6,11 @@ occapi_entities_bridge.settings:
   requirements:
     _permission: 'administer occapi_provider'
 
-occapi_entities_bridge.import:
+occapi_entities_bridge.select:
   path: '/admin/structure/occapi/import'
   defaults:
-    _form: 'Drupal\occapi_entities_bridge\Form\OccapiImportForm'
-    _title: 'Import OCCAPI entities'
+    _form: 'Drupal\occapi_entities_bridge\Form\OccapiSelectForm'
+    _title: 'Select OCCAPI entities to import'
   requirements:
     _permission: 'administer occapi_provider'
 

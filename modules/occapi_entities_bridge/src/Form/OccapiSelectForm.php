@@ -8,7 +8,6 @@ use Drupal\Core\Link;
 use Drupal\Core\Render\Element\StatusMessages;
 use Drupal\Core\Url;
 use Drupal\occapi_client\DataFormatter;
-use Drupal\occapi_client\JsonDataFetcher;
 use Drupal\occapi_client\JsonDataProcessor as Json;
 use Drupal\occapi_client\OccapiProviderManager as Manager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -16,7 +15,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Provides an OCCAPI entities import form.
  */
-class OccapiImportForm extends FormBase {
+class OccapiSelectForm extends FormBase {
 
   /**
    * OCCAPI provider.
@@ -68,13 +67,6 @@ class OccapiImportForm extends FormBase {
   protected $dataFormatter;
 
   /**
-   * JSON data fetcher service.
-   *
-   * @var \Drupal\occapi_client\JsonDataFetcher
-   */
-  protected $jsonDataFetcher;
-
-  /**
    * JSON data processing service.
    *
    * @var \Drupal\occapi_client\JsonDataProcessor
@@ -102,7 +94,6 @@ class OccapiImportForm extends FormBase {
     // Instantiates this form class.
     $instance = parent::create($container);
     $instance->dataFormatter        = $container->get('occapi_client.format');
-    $instance->jsonDataFetcher      = $container->get('occapi_client.fetch');
     $instance->jsonDataProcessor    = $container->get('occapi_client.json');
     $instance->loggerFactory        = $container->get('logger.factory');
     $instance->logger = $instance->loggerFactory->get('occapi_entities_bridge');

@@ -5,9 +5,9 @@ occapi_entities_bridge.settings:
   parent: occapi_client.admin
   weight: 10
 
-occapi_entities_bridge.import:
+occapi_entities_bridge.select:
   title: 'Import OCCAPI entities'
-  route_name: occapi_entities_bridge.import
-  description: 'Settings for OCCAPI client'
+  route_name: occapi_entities_bridge.select
+  description: 'Select OCCAPI entities to import'
   parent: occapi_entities.admin
   weight: 10
