@@ -394,7 +394,7 @@ class OccapiImportForm extends FormBase {
 
     $programme_id = $form_state->getValue('programme_select');
 
-    $form['data']['status'] = $programme_id;
+    $form['data']['status']['#value'] = $programme_id;
     $form['data']['preview']['#markup'] = $this->emptyData;
 
     if (! empty($provider_id) && !empty($programme_id)) {
