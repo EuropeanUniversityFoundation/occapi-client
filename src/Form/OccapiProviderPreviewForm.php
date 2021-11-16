@@ -50,6 +50,13 @@ class OccapiProviderPreviewForm extends EntityForm {
   protected $logger;
 
   /**
+   * The messenger service.
+   *
+   * @var \Drupal\Core\Messenger\MessengerInterface
+   */
+  protected $messenger;
+
+  /**
    * OCCAPI provider manager service.
    *
    * @var \Drupal\occapi_client\OccapiProviderManager
@@ -66,6 +73,7 @@ class OccapiProviderPreviewForm extends EntityForm {
     $instance->jsonDataProcessor    = $container->get('occapi_client.json');
     $instance->loggerFactory        = $container->get('logger.factory');
     $instance->logger = $instance->loggerFactory->get('occapi_client');
+    $instance->messenger            = $container->get('messenger');
     $instance->providerManager      = $container->get('occapi_client.manager');
     return $instance;
   }
@@ -95,6 +103,11 @@ class OccapiProviderPreviewForm extends EntityForm {
     // Prepare Institution data.
     $this->heiResource = $this->providerManager
       ->loadInstitution($provider_id);
+
+    if (empty($this->heiResource)) {
+      $this->messenger->addError($this->t('No available data!'));
+      return $form;
+    }
 
     $hei_json = \json_encode(
       $this->heiResource[Json::DATA_KEY],

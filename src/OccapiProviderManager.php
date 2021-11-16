@@ -210,10 +210,10 @@ class OccapiProviderManager {
   * @param string $provider_id
   *   The OCCAPI provider ID.
   *
-  * @return array $data
+  * @return array|NULL $data
   *   An array containing the JSON:API Institution resource data.
   */
-  public function loadInstitution(string $provider_id): array {
+  public function loadInstitution(string $provider_id): ?array {
     $provider = $this->getProvider($provider_id);
 
     $hei_id   = $provider->get('hei_id');

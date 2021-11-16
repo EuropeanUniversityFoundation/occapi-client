@@ -1,0 +1,31 @@
+<?php
+
+/**
+ * @file
+ * Contains occapi_entities_bridge.module.
+ */
+
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Field\BaseFieldDefinition;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\ewp_institutions_get\InstitutionManager;
+
+/**
+ * Implements hook_ENTITY_TYPE_prepare_form().
+ */
+function occapi_entities_bridge_occapi_provider_prepare_form(EntityInterface $entity, $operation, FormStateInterface $form_state) {
+  if ($operation == 'preview') {
+    $hei_id = $entity->get('hei_id');
+
+    // Check if the Institution is present in the system.
+    $result = \Drupal::service('occapi_entities_bridge.manager')
+      ->validateInstitution($hei_id);
+
+    if (! $result['status']) {
+      \Drupal::service('messenger')->addWarning($result['message']);
+    } else {
+      \Drupal::service('messenger')->addMessage($result['message']);
+    }
+  }
+}
