@@ -5,6 +5,7 @@ namespace Drupal\occapi_entities_bridge\Form;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Link;
+use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\Core\Url;
 use Drupal\occapi_client\DataFormatter;
 use Drupal\occapi_client\JsonDataProcessor as Json;
@@ -15,6 +16,13 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Provides an OCCAPI entities select form.
  */
 class OccapiSelectForm extends FormBase {
+
+  /**
+   * Drupal\Core\Session\AccountProxyInterface definition.
+   *
+   * @var AccountProxyInterface $currentUser
+   */
+  protected $currentUser;
 
   /**
    * OCCAPI Institution resource.
@@ -57,9 +65,10 @@ class OccapiSelectForm extends FormBase {
   public static function create(ContainerInterface $container) {
     // Instantiates this form class.
     $instance = parent::create($container);
-    $instance->dataFormatter        = $container->get('occapi_client.format');
-    $instance->jsonDataProcessor    = $container->get('occapi_client.json');
-    $instance->providerManager      = $container->get('occapi_client.manager');
+    $instance->dataFormatter      = $container->get('occapi_client.format');
+    $instance->jsonDataProcessor  = $container->get('occapi_client.json');
+    $instance->providerManager    = $container->get('occapi_client.manager');
+    $instance->currentUser        = $container->get('current_user');
     return $instance;
   }
 
@@ -74,10 +83,8 @@ class OccapiSelectForm extends FormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
-    $user = \Drupal::currentUser();
-
     // Give a user with permission the opportunity to add an entity manually
-    if ($user->hasPermission('bypass import occapi entities')) {
+    if ($this->currentUser->hasPermission('bypass import occapi entities')) {
       $add_programme_link = Link::fromTextAndUrl(t('add a new Programme'),
         Url::fromRoute('entity.programme.add_form'))->toString();
       $add_course_link = Link::fromTextAndUrl(t('add a new Course'),

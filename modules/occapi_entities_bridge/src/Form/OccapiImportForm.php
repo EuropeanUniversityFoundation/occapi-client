@@ -7,6 +7,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Link;
 use Drupal\Core\Render\Element\StatusMessages;
 use Drupal\Core\Messenger\MessengerInterface;
+use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\Core\Url;
 use Drupal\occapi_client\DataFormatter;
 use Drupal\occapi_client\JsonDataProcessor;
@@ -18,6 +19,13 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Provides an OCCAPI entities import form.
  */
 class OccapiImportForm extends FormBase {
+
+  /**
+   * Drupal\Core\Session\AccountProxyInterface definition.
+   *
+   * @var AccountProxyInterface $currentUser
+   */
+  protected $currentUser;
 
   /**
    * OCCAPI Institution resource.
@@ -79,6 +87,7 @@ class OccapiImportForm extends FormBase {
     $instance->jsonDataProcessor  = $container->get('occapi_client.json');
     $instance->messenger          = $container->get('messenger');
     $instance->providerManager    = $container->get('occapi_client.manager');
+    $instance->currentUser        = $container->get('current_user');
     return $instance;
   }
 
@@ -93,10 +102,8 @@ class OccapiImportForm extends FormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state, string $tempstore = NULL) {
-    $user = \Drupal::currentUser();
-
     // Give a user with permission the opportunity to add an entity manually
-    if ($user->hasPermission('bypass import occapi entities')) {
+    if ($this->currentUser->hasPermission('bypass import occapi entities')) {
       $add_programme_link = Link::fromTextAndUrl(t('add a new Programme'),
         Url::fromRoute('entity.programme.add_form'))->toString();
       $add_course_link = Link::fromTextAndUrl(t('add a new Course'),
@@ -123,10 +130,12 @@ class OccapiImportForm extends FormBase {
       return $form;
     }
 
-    // Parse the tempstore parameter to get the OCCAPI provider an its HEI ID.
+    // Parse the tempstore parameter to get the OCCAPI provider and its HEI ID.
     $components = \explode('.', $tempstore);
+
     $provider = $this->providerManager
       ->getProvider($components[0]);
+
     $hei_id = $provider->get('hei_id');
 
     // Check if the Institution is present in the system.
