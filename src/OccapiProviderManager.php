@@ -5,7 +5,6 @@ namespace Drupal\occapi_client;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
-use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\occapi_client\DataFormatter;
@@ -70,13 +69,6 @@ class OccapiProviderManager {
   protected $logger;
 
   /**
-   * The messenger service.
-   *
-   * @var \Drupal\Core\Messenger\MessengerInterface
-   */
-  protected $messenger;
-
-  /**
    * The constructor.
    *
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
@@ -91,8 +83,6 @@ class OccapiProviderManager {
    *   JSON data processing service.
    * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $logger_factory
    *   The logger factory service.
-   * @param \Drupal\Core\Messenger\MessengerInterface $messenger
-   *   The messenger service.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
    */
@@ -103,7 +93,6 @@ class OccapiProviderManager {
       JsonDataFetcher $json_data_fetcher,
       JsonDataProcessor $json_data_processor,
       LoggerChannelFactoryInterface $logger_factory,
-      MessengerInterface $messenger,
       TranslationInterface $string_translation
   ) {
     $this->configFactory      = $config_factory;
@@ -112,7 +101,6 @@ class OccapiProviderManager {
     $this->jsonDataFetcher    = $json_data_fetcher;
     $this->jsonDataProcessor  = $json_data_processor;
     $this->logger             = $logger_factory->get('occapi_client');
-    $this->messenger          = $messenger;
     $this->stringTranslation  = $string_translation;
   }
 

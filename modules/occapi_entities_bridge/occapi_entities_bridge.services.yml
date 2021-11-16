@@ -1,4 +1,7 @@
 services:
+  occapi_entities_bridge.manager:
+    class: Drupal\occapi_entities_bridge\OccapiImportManager
+    arguments: ['@config.factory', '@occapi_client.format', '@entity_type.manager', '@ewp_institutions_get.manager', '@occapi_client.fetch', '@occapi_client.json', '@logger.factory', '@messenger', '@occapi_client.manager', '@string_translation']
   occapi_entities_bridge.route_subscriber:
     class: Drupal\occapi_entities_bridge\Routing\RouteSubscriber
     tags:

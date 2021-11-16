@@ -9,8 +9,9 @@ use Drupal\Core\Render\Element\StatusMessages;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Url;
 use Drupal\occapi_client\DataFormatter;
-use Drupal\occapi_client\JsonDataProcessor as Json;
-use Drupal\occapi_client\OccapiProviderManager as Manager;
+use Drupal\occapi_client\JsonDataProcessor;
+use Drupal\occapi_client\OccapiProviderManager;
+use Drupal\occapi_entities_bridge\OccapiImportManager as Manager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -40,6 +41,13 @@ class OccapiImportForm extends FormBase {
   protected $dataFormatter;
 
   /**
+   * OCCAPI entity import manager service.
+   *
+   * @var \Drupal\occapi_entities_bridge\OccapiImportManager
+   */
+  protected $importManager;
+
+  /**
    * JSON data processing service.
    *
    * @var \Drupal\occapi_client\JsonDataProcessor
@@ -66,10 +74,11 @@ class OccapiImportForm extends FormBase {
   public static function create(ContainerInterface $container) {
     // Instantiates this form class.
     $instance = parent::create($container);
-    $instance->dataFormatter        = $container->get('occapi_client.format');
-    $instance->jsonDataProcessor    = $container->get('occapi_client.json');
-    $instance->messenger            = $container->get('messenger');
-    $instance->providerManager      = $container->get('occapi_client.manager');
+    $instance->dataFormatter      = $container->get('occapi_client.format');
+    $instance->importManager      = $container->get('occapi_entities_bridge.manager');
+    $instance->jsonDataProcessor  = $container->get('occapi_client.json');
+    $instance->messenger          = $container->get('messenger');
+    $instance->providerManager    = $container->get('occapi_client.manager');
     return $instance;
   }
 
@@ -107,7 +116,7 @@ class OccapiImportForm extends FormBase {
 
     // Validate the tempstore parameter.
     $error = $this->providerManager
-      ->validateResourceTempstore($tempstore, Manager::PROGRAMME_KEY);
+      ->validateResourceTempstore($tempstore, OccapiProviderManager::PROGRAMME_KEY);
 
     if ($error) {
       $this->messenger->addError($error);
@@ -116,7 +125,7 @@ class OccapiImportForm extends FormBase {
 
     $form['status'] = [
       '#type' => 'markup',
-      '#markup' => '<p>' . $this->t('All is well.') . '</p>'
+      '#markup' => '<p>' . $this->importManager->helloWorld() . '</p>'
     ];
 
     // dpm($form);
@@ -129,14 +138,6 @@ class OccapiImportForm extends FormBase {
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
 
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  private function validateParameter(string $tempstore) {
-
-    return $error;
   }
 
 }
