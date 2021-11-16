@@ -5,7 +5,6 @@ namespace Drupal\occapi_entities_bridge\Form;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Link;
-use Drupal\Core\Render\Element\StatusMessages;
 use Drupal\Core\Url;
 use Drupal\occapi_client\DataFormatter;
 use Drupal\occapi_client\JsonDataProcessor as Json;
@@ -18,39 +17,11 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class OccapiSelectForm extends FormBase {
 
   /**
-   * OCCAPI provider.
-   *
-   * @var \Drupal\occapi_client\Entity\OccapiProvider
-   */
-  protected $provider;
-
-  /**
    * OCCAPI Institution resource.
    *
    * @var array
    */
   protected $heiResource;
-
-  /**
-   * OCCAPI Organizational Unit collection.
-   *
-   * @var array
-   */
-  protected $ounitCollection;
-
-  /**
-   * OCCAPI Programme collection.
-   *
-   * @var array
-   */
-  protected $programmeCollection;
-
-  /**
-   * OCCAPI Course collection.
-   *
-   * @var array
-   */
-  protected $courseCollection;
 
   /**
    * Empty data placeholder.
@@ -74,13 +45,6 @@ class OccapiSelectForm extends FormBase {
   protected $jsonDataProcessor;
 
   /**
-   * The logger service.
-   *
-   * @var \Psr\Log\LoggerInterface
-   */
-  protected $logger;
-
-  /**
    * OCCAPI provider manager service.
    *
    * @var \Drupal\occapi_client\OccapiProviderManager
@@ -95,8 +59,6 @@ class OccapiSelectForm extends FormBase {
     $instance = parent::create($container);
     $instance->dataFormatter        = $container->get('occapi_client.format');
     $instance->jsonDataProcessor    = $container->get('occapi_client.json');
-    $instance->loggerFactory        = $container->get('logger.factory');
-    $instance->logger = $instance->loggerFactory->get('occapi_entities_bridge');
     $instance->providerManager      = $container->get('occapi_client.manager');
     return $instance;
   }
@@ -150,6 +112,8 @@ class OccapiSelectForm extends FormBase {
     $form['header'] = [
       '#type' => 'fieldset',
       '#title' => $this->t('Select a Programme to import'),
+      '#prefix' => '<div id="selectHeader">',
+      '#suffix' => '</div>',
       '#weight' => '-10'
     ];
 
@@ -163,7 +127,7 @@ class OccapiSelectForm extends FormBase {
         'callback' => '::getProgrammeList',
         'disable-refocus' => TRUE,
         'event' => 'change',
-        'wrapper' => 'programmeSelect',
+        'wrapper' => 'selectHeader',
       ],
       '#attributes' => [
         'name' => 'provider_select',
@@ -174,8 +138,6 @@ class OccapiSelectForm extends FormBase {
     $form['header']['programme_select'] = [
       '#type' => 'select',
       '#title' => $this->t('Programmes'),
-      '#prefix' => '<div id="programmeSelect">',
-      '#suffix' => '</div>',
       '#options' => [],
       '#default_value' => '',
       '#empty_value' => '',
@@ -183,7 +145,7 @@ class OccapiSelectForm extends FormBase {
         'callback' => '::previewProgramme',
         'disable-refocus' => TRUE,
         'event' => 'change',
-        'wrapper' => 'data',
+        'wrapper' => 'preview',
       ],
       '#validated' => TRUE,
       '#states' => [
@@ -200,30 +162,29 @@ class OccapiSelectForm extends FormBase {
       '#type' => 'details',
       '#open' => TRUE,
       '#title' => $this->t('Data'),
-      '#prefix' => '<div id="data">',
-      '#suffix' => '</div>',
       '#weight' => '-7',
     ];
 
-    $form['data']['status'] = [
-      '#type' => 'hidden',
-      '#value' => '',
-      '#attributes' => [
-        'name' => 'data_status',
+    $form['data']['empty'] = [
+      '#type' => 'item',
+      '#markup' => '<p><em>' . $this->emptyData . '</em></p>',
+      '#states' => [
+        'visible' => [
+          ':input[name="provider_select"]' => ['value' => ''],
+        ],
       ],
     ];
 
     $form['data']['preview'] = [
-      '#type' => 'markup',
+      '#type' => 'item',
       '#markup' => '<p><em>' . $this->emptyData . '</em></p>',
-    ];
-
-    $target = '#programmeSelect';
-    $link_text = $this->t('Back to top');
-
-    $form['data']['back_to_top'] = [
-      '#type' => 'markup',
-      '#markup' => '<p><a href="' . $target . '">' . $link_text . '</a></p>',
+      '#prefix' => '<div id="preview">',
+      '#suffix' => '</div>',
+      '#states' => [
+        'invisible' => [
+          ':input[name="provider_select"]' => ['value' => ''],
+        ],
+      ],
     ];
 
     $form['actions'] = [
@@ -243,27 +204,8 @@ class OccapiSelectForm extends FormBase {
         'disabled' => [
           ':input[name="programme_select"]' => ['value' => ''],
         ],
-        'invisible' => [
-          ':input[name="data_status"]' => ['value' => ''],
-        ],
       ],
     ];
-
-    // $form['actions']['load'] = [
-    //   '#type' => 'submit',
-    //   '#submit' => ['::loadImportForm'],
-    //   '#value' => $this->t('Load Import form'),
-    //   '#states' => [
-    //     'disabled' => [
-    //       ':input[name="hei_select"]' => ['value' => ''],
-    //     ],
-    //     'visible' => [
-    //       ':input[name="data_status"]' => ['value' => ''],
-    //     ],
-    //   ],
-    // ];
-
-    // dpm($form);
 
     return $form;
   }
@@ -272,38 +214,28 @@ class OccapiSelectForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    // $index_item = $form_state->getValue('index_select');
-    // $hei_id = $form_state->getValue('hei_select');
-    //
-    // $form_state->setRedirect('entity.hei.auto_import',[
-    //   'index_key' => $index_item,
-    //   'hei_key' => $hei_id
+    $provider_id = $form_state->getValue('provider_select');
+    $programme_id = $form_state->getValue('programme_select');
+
+    $tempstore = $provider_id . Manager::PROGRAMME_KEY . $programme_id;
+
+    // $form_state->setRedirect('occapi_entities_bridge.import',[
+    //   'provider_id' => $provider_id,
+    //   'tempstore' => $tempstore
     // ]);
   }
 
   /**
-   * {@inheritdoc}
-   */
-  public function loadImportForm(array &$form, FormStateInterface $form_state) {
-    // $index_item = $form_state->getValue('index_select');
-    // $hei_id = $form_state->getValue('hei_select');
-    //
-    // $form_state->setRedirect('entity.hei.import_form',[
-    //   'index_key' => $index_item,
-    //   'hei_key' => $hei_id
-    // ]);
-  }
-
-  /**
-  * Fetch the Institution data and build the Programme select list.
+  * AJAX callback to build the Programme select list.
   */
   public function getProgrammeList(array $form, FormStateInterface $form_state) {
     $provider_id = $form_state->getValue('provider_select');
 
-    if ($provider_id) {
-      $options = ['' => '- None -'];
+    $options = ['' => '- None -'];
 
-      $this->provider = $this->providerManager
+    if ($provider_id) {
+
+      $provider = $this->providerManager
         ->getProvider($provider_id);
 
       // Fetch Institution data.
@@ -312,38 +244,38 @@ class OccapiSelectForm extends FormBase {
 
       // Fetch Programme data from Institution resource links.
       if (
-        ! $this->provider->get('ounit_filter') &&
+        ! $provider->get('ounit_filter') &&
         array_key_exists(
           Manager::PROGRAMME_KEY,
           $this->heiResource[Json::LINKS_KEY]
         )
       ) {
-        $this->programmeCollection = $this->providerManager
+        $programme_collection = $this->providerManager
           ->loadProgrammes($provider_id);
 
         $options += $this->jsonDataProcessor
-          ->getTitles($this->programmeCollection);
+          ->getTitles($programme_collection);
       }
 
       // Fetch Programme data from all available OUnit resource links.
       if (
-        $this->provider->get('ounit_filter') &&
+        $provider->get('ounit_filter') &&
         array_key_exists(
           Manager::OUNIT_KEY,
           $this->heiResource[Json::LINKS_KEY]
         )
       ) {
-        $this->programmeCollection = [Json::DATA_KEY => []];
+        $programme_collection = [Json::DATA_KEY => []];
 
-        $this->ounitCollection = $this->providerManager
+        $ounit_collection = $this->providerManager
           ->loadOunits($provider_id);
 
-        foreach ($this->ounitCollection[Json::DATA_KEY] as $i => $resource) {
+        foreach ($ounit_collection[Json::DATA_KEY] as $i => $resource) {
           $ounit_id     = $this->jsonDataProcessor->getId($resource);
           $ounit_title  = $this->jsonDataProcessor->getTitle($resource);
           $ounit_label  = $ounit_title . ' (' . $ounit_id . ')';
 
-          $ounit_resource   = $this->providerManager
+          $ounit_resource = $this->providerManager
             ->loadOunit($provider_id, $ounit_id);
 
           if (
@@ -357,7 +289,7 @@ class OccapiSelectForm extends FormBase {
 
             if (! empty($ounit_programmes[Json::DATA_KEY])) {
               $partial_data = $ounit_programmes[Json::DATA_KEY];
-              $this->programmeCollection[Json::DATA_KEY] += $partial_data;
+              $programme_collection[Json::DATA_KEY] += $partial_data;
 
               $programme_titles = $this->jsonDataProcessor
                 ->getTitles($ounit_programmes);
@@ -366,27 +298,22 @@ class OccapiSelectForm extends FormBase {
             }
           }
         }
-
       }
-
-      $form['header']['programme_select']['#options'] = $options;
-      return $form['header']['programme_select'];
     }
 
+    $form['header']['programme_select']['#options'] = $options;
+    return $form['header'];
   }
 
   /**
   * Fetch the data and preview Programme
   */
   public function previewProgramme(array $form, FormStateInterface $form_state) {
-    $markup ='';
+    $markup = '<p><em>' . $this->emptyData . '</em></p>';
 
     $provider_id = $form_state->getValue('provider_select');
 
     $programme_id = $form_state->getValue('programme_select');
-
-    $form['data']['status']['#value'] = $programme_id;
-    $form['data']['preview']['#markup'] = $this->emptyData;
 
     if (! empty($provider_id) && !empty($programme_id)) {
       $programme_resource = $this->providerManager
@@ -395,7 +322,7 @@ class OccapiSelectForm extends FormBase {
       $programme_markup = $this->dataFormatter
         ->programmeResourceTable($programme_resource);
 
-      $markup .= '<h3>' . $this->t('Programme data') . '</h3>';
+      $markup = '<h3>' . $this->t('Programme data') . '</h3>';
       $markup .= $programme_markup;
 
       if (
@@ -412,12 +339,17 @@ class OccapiSelectForm extends FormBase {
 
         $markup .= '<h3>' . $this->t('Course data') . '</h3>';
         $markup .= $course_markup;
+
+        $target = '#selectHeader';
+        $link_text = $this->t('Back to top');
+
+        $markup .= '<p><a href="' . $target . '">' . $link_text . '</a></p>';
       }
     }
 
     $form['data']['preview']['#markup'] = $markup;
 
-    return $form['data'];
+    return $form['data']['preview'];
   }
 
 }

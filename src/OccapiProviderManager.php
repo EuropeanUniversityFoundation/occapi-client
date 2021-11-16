@@ -229,7 +229,7 @@ class OccapiProviderManager {
   }
 
   /**
-   * Load resource collection by type.
+   * Load resource collection by type, filtered by parent type and id.
    *
    * @param string $provider_id
    *   The OCCAPI provider ID.
