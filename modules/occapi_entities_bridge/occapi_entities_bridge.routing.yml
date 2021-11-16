@@ -12,7 +12,19 @@ occapi_entities_bridge.select:
     _form: 'Drupal\occapi_entities_bridge\Form\OccapiSelectForm'
     _title: 'Select OCCAPI entities to import'
   requirements:
-    _permission: 'administer occapi_provider'
+    _permission: 'administer course.administer programme'
+
+occapi_entities_bridge.import:
+  path: '/admin/structure/occapi/import/{tempstore}'
+  defaults:
+    _form: 'Drupal\occapi_entities_bridge\Form\OccapiImportForm'
+    _title: 'Import OCCAPI entities'
+  requirements:
+    _permission: 'administer course.administer programme'
+  options:
+    parameters:
+      tempstore:
+        type: tempstore
 
 occapi_entities_bridge.import_confirm:
   path: '/admin/structure/occapi/import/confirm'

@@ -12,7 +12,7 @@ use Drupal\occapi_client\OccapiProviderManager as Manager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Provides an OCCAPI entities import form.
+ * Provides an OCCAPI entities select form.
  */
 class OccapiSelectForm extends FormBase {
 
@@ -67,7 +67,7 @@ class OccapiSelectForm extends FormBase {
    * {@inheritdoc}
    */
   public function getFormId() {
-    return 'occapi_entities_bridge_occapi_import';
+    return 'occapi_entities_bridge_occapi_select';
   }
 
   /**
@@ -217,12 +217,12 @@ class OccapiSelectForm extends FormBase {
     $provider_id = $form_state->getValue('provider_select');
     $programme_id = $form_state->getValue('programme_select');
 
-    $tempstore = $provider_id . Manager::PROGRAMME_KEY . $programme_id;
+    $args = [$provider_id, Manager::PROGRAMME_KEY, $programme_id];
+    $tempstore = \implode('.', $args);
 
-    // $form_state->setRedirect('occapi_entities_bridge.import',[
-    //   'provider_id' => $provider_id,
-    //   'tempstore' => $tempstore
-    // ]);
+    $form_state->setRedirect('occapi_entities_bridge.import',[
+      'tempstore' => $tempstore
+    ]);
   }
 
   /**

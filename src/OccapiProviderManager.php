@@ -153,6 +153,70 @@ class OccapiProviderManager {
   }
 
   /**
+   * Validate a resource tempstore key.
+   *
+   * @param string $tempstore
+   *   TempStore key to validate.
+   * @param string $type|NULL
+   *   OCCAPI entity type key to validate.
+   *
+   * @return string|NULL
+   *   The error message if any error is detected.
+   */
+  public function validateResourceTempstore(string $tempstore, string $validate_type = NULL): ?string {
+    // Parse the tempstore parameter.
+    $components = \explode('.', $tempstore);
+
+    // TempStore key format for a single resource must have 3 components.
+    if (\count($components) < 3) {
+      return $this->t('Invalid TempStore key format.');
+    }
+
+    $provider = $this->getProvider($components[0]);
+
+    // The first component must be a valid OCCAPI provider ID.
+    if (! $provider) {
+      return $this->t('Invalid OCCAPI provider ID.');
+    }
+
+    // The OCCAPI provider must be enabled.
+    if (! $provider->status()) {
+      return $this->t('OCCAPI provider is not enabled.');
+    }
+
+    // The second component must be a known OCCAPI entity type.
+    $valid_types = [self::OUNIT_KEY, self::PROGRAMME_KEY, self::COURSE_KEY];
+
+    if (! \in_array($components[1], $valid_types)) {
+      return $this->t('Unknown OCCAPI entity type.');
+    }
+
+    // If a validate_type is specified, it must itself be validated.
+    if (
+      ! empty($validate_type) &&
+      ! \in_array($validate_type, $valid_types)
+    ) {
+      $validate_type = NULL;
+    }
+
+    // If a validate_type is specified, the second component must be the same.
+    if (
+      ! empty($validate_type) &&
+      $components[1] !== $validate_type
+    ) {
+      return $this->t('Invalid OCCAPI entity type.');
+    }
+
+    // The tempstore must be populated already.
+    if (empty($this->jsonDataFetcher->checkUpdated($tempstore))) {
+      return $this->t('TempStore is not available.');
+    }
+
+    // No errors found.
+    return NULL;
+  }
+
+  /**
   * Load Institution resource.
   *
   * @param string $provider_id
