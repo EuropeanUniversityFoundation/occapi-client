@@ -22,6 +22,14 @@ class OccapiImportManager {
 
   use StringTranslationTrait;
 
+  // Machine names of OCCAPI entity types.
+  const PROGRAMME_ENTITY = 'programme';
+  const COURSE_ENTITY    = 'course';
+
+  // Machine names of OCCAPI extra fields.
+  const REMOTE_ID  = 'remote_id';
+  const REMOTE_URL = 'remote_url';
+
   /**
    * Config factory.
    *

@@ -6,10 +6,10 @@
  */
 
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Routing\RouteMatchInterface;
-use Drupal\ewp_institutions_get\InstitutionManager;
+use Drupal\occapi_entities_bridge\OccapiImportManager as Manager;
 
 /**
  * Implements hook_ENTITY_TYPE_prepare_form().
@@ -28,4 +28,88 @@ function occapi_entities_bridge_occapi_provider_prepare_form(EntityInterface $en
       \Drupal::service('messenger')->addMessage($result['message']);
     }
   }
+}
+
+/**
+ * Implements hook_base_field_info().
+ *
+ * Add new base fields to the OCCAPI entity types to store remote API data.
+ */
+function occapi_entities_bridge_entity_base_field_info(EntityTypeInterface $entity_type) {
+  $occapi_entity_types = [
+    Manager::PROGRAMME_ENTITY,
+    Manager::COURSE_ENTITY
+  ];
+
+  if (\in_array($entity_type->id(), $occapi_entity_types)) {
+    $fields[Manager::REMOTE_ID] = BaseFieldDefinition::create('string')
+      ->setLabel(t('Remote ID'))
+      ->setDisplayOptions('form', [
+        'type' => 'textfield',
+        'weight' => 101,
+      ])
+      ->setDisplayConfigurable('form', FALSE);
+
+    $fields[Manager::REMOTE_URL] = BaseFieldDefinition::create('string')
+      ->setLabel(t('Remote URL'))
+      ->setDisplayOptions('form', [
+        'type' => 'textfield',
+        'weight' => 102,
+      ])
+      ->setDisplayConfigurable('form', FALSE);
+
+    return $fields;
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function occapi_entities_bridge_form_course_add_form_alter(&$form, FormStateInterface $form_state) {
+  _occapi_entities_bridge_api_fields($form, $form_state);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function occapi_entities_bridge_form_course_edit_form_alter(&$form, FormStateInterface $form_state) {
+  _occapi_entities_bridge_api_fields($form, $form_state);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function occapi_entities_bridge_form_programme_add_form_alter(&$form, FormStateInterface $form_state) {
+  _occapi_entities_bridge_api_fields($form, $form_state);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function occapi_entities_bridge_form_programme_edit_form_alter(&$form, FormStateInterface $form_state) {
+  _occapi_entities_bridge_api_fields($form, $form_state);
+}
+
+/**
+ * Performs the actual form alter.
+ */
+function _occapi_entities_bridge_api_fields(&$form, FormStateInterface $form_state) {
+  $remote_id  = $form[Manager::REMOTE_ID];
+  $remote_url = $form[Manager::REMOTE_URL];
+
+  $form['api_fields'] = [
+    '#type' => 'details',
+    '#title' => t('API fields'),
+    '#tree' => FALSE,
+    '#weight' => 100
+  ];
+
+  $remote_id['widget'][0]['value']['#attributes']['readonly']  = 'readonly';
+  $remote_url['widget'][0]['value']['#attributes']['readonly'] = 'readonly';
+
+  $form['api_fields'][Manager::REMOTE_ID]  = $remote_id;
+  $form['api_fields'][Manager::REMOTE_URL] = $remote_url;
+
+  unset($form[Manager::REMOTE_ID]);
+  unset($form[Manager::REMOTE_URL]);
 }
