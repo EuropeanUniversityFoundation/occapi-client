@@ -123,10 +123,23 @@ class OccapiImportForm extends FormBase {
       return $form;
     }
 
-    $form['status'] = [
-      '#type' => 'markup',
-      '#markup' => '<p>' . $this->importManager->helloWorld() . '</p>'
-    ];
+    // Parse the tempstore parameter to get the OCCAPI provider an its HEI ID.
+    $components = \explode('.', $tempstore);
+    $provider = $this->providerManager
+      ->getProvider($components[0]);
+    $hei_id = $provider->get('hei_id');
+
+    // Check if the Institution is present in the system.
+    $result = $this->importManager
+      ->validateInstitution($hei_id);
+
+    if (! $result['status']) {
+      $this->messenger->addError($result['message']);
+      return $form;
+    }
+    else {
+      $this->messenger->addMessage($result['message']);
+    }
 
     // dpm($form);
 

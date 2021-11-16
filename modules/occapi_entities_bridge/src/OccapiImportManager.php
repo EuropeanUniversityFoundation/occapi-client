@@ -133,8 +133,44 @@ class OccapiImportManager {
     $this->stringTranslation  = $string_translation;
   }
 
-  public function helloWorld() {
-    return $this->t('Hello world!');
-  }
+  /**
+   * Validate the existence of an Institution entity.
+   *
+   * @param string $hei_id
+   *   Institution ID to validate.
+   *
+   * @return array $result
+   *   An array containing the validation status and related message.
+   */
+  public function validateInstitution(string $hei_id): array {
+    // Check if an entity with the same hei_id already exists
+    $exists = $this->heiManager
+      ->getInstitution($hei_id);
 
+    if (!empty($exists)) {
+      foreach ($exists as $id => $hei) {
+        $link = $hei->toLink();
+        $renderable = $link->toRenderable();
+      }
+
+      $message = $this->t('Institution with ID <code>@hei_id</code> already exists: @link', [
+        '@hei_id' => $hei_id,
+        '@link' => render($renderable),
+      ]);
+
+      $status = TRUE;
+    }
+    else {
+      $message = $this->t('Institution with ID <code>@hei_id</code> does not exist!', [
+        '@hei_id' => $hei_id,
+      ]);
+
+      $status = FALSE;
+    }
+
+    $result['status'] = $status;
+    $result['message'] = $message;
+
+    return $result;
+  }
 }
