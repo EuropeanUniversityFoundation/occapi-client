@@ -5,6 +5,7 @@ namespace Drupal\occapi_entities_bridge\Form;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Link;
+use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\Core\Url;
 use Drupal\occapi_client\DataFormatter;
@@ -53,6 +54,13 @@ class OccapiSelectForm extends FormBase {
   protected $jsonDataProcessor;
 
   /**
+   * The messenger service.
+   *
+   * @var \Drupal\Core\Messenger\MessengerInterface
+   */
+  protected $messenger;
+
+  /**
    * OCCAPI provider manager service.
    *
    * @var \Drupal\occapi_client\OccapiProviderManager
@@ -67,6 +75,7 @@ class OccapiSelectForm extends FormBase {
     $instance = parent::create($container);
     $instance->dataFormatter      = $container->get('occapi_client.format');
     $instance->jsonDataProcessor  = $container->get('occapi_client.json');
+    $instance->messenger          = $container->get('messenger');
     $instance->providerManager    = $container->get('occapi_client.manager');
     $instance->currentUser        = $container->get('current_user');
     return $instance;
@@ -83,23 +92,19 @@ class OccapiSelectForm extends FormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
-    // Give a user with permission the opportunity to add an entity manually
+    // Give a user with permission the opportunity to add an entity manually.
     if ($this->currentUser->hasPermission('bypass import occapi entities')) {
       $add_programme_link = Link::fromTextAndUrl(t('add a new Programme'),
         Url::fromRoute('entity.programme.add_form'))->toString();
       $add_course_link = Link::fromTextAndUrl(t('add a new Course'),
         Url::fromRoute('entity.course.add_form'))->toString();
 
-      $warning = $this->t('You can bypass this form and @add_programme or @add_course manually.',[
+      $notice = $this->t('You can bypass this form and @add_programme or @add_course manually.',[
         '@add_programme' => $add_programme_link,
         '@add_course' => $add_course_link
       ]);
 
-      $form['messages'] = [
-        '#type' => 'markup',
-        '#markup' => $warning,
-        '#weight' => '-20'
-      ];
+      $this->messenger->addMessage($notice);
     }
 
     // Load all available OCCAPI providers.
@@ -236,6 +241,9 @@ class OccapiSelectForm extends FormBase {
   * AJAX callback to build the Programme select list.
   */
   public function getProgrammeList(array $form, FormStateInterface $form_state) {
+    // Prevent the messenger service from rendering the messages again.
+    $this->messenger->deleteAll();
+
     $provider_id = $form_state->getValue('provider_select');
 
     $options = ['' => '- None -'];
@@ -316,6 +324,9 @@ class OccapiSelectForm extends FormBase {
   * Fetch the data and preview Programme
   */
   public function previewProgramme(array $form, FormStateInterface $form_state) {
+    // Prevent the messenger service from rendering the messages again.
+    $this->messenger->deleteAll();
+
     $markup = '<p><em>' . $this->emptyData . '</em></p>';
 
     $provider_id = $form_state->getValue('provider_select');
