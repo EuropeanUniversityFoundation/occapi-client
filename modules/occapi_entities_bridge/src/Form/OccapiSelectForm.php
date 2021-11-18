@@ -9,8 +9,8 @@ use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\Core\Url;
 use Drupal\occapi_client\DataFormatter;
-use Drupal\occapi_client\JsonDataProcessor as Json;
-use Drupal\occapi_client\OccapiProviderManager as Manager;
+use Drupal\occapi_client\JsonDataProcessor;
+use Drupal\occapi_client\OccapiProviderManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -229,7 +229,7 @@ class OccapiSelectForm extends FormBase {
     $provider_id = $form_state->getValue('provider_select');
     $programme_id = $form_state->getValue('programme_select');
 
-    $args = [$provider_id, Manager::PROGRAMME_KEY, $programme_id];
+    $args = [$provider_id, OccapiProviderManager::PROGRAMME_KEY, $programme_id];
     $tempstore = \implode('.', $args);
 
     $form_state->setRedirect('occapi_entities_bridge.import',[
@@ -261,8 +261,8 @@ class OccapiSelectForm extends FormBase {
       if (
         ! $provider->get('ounit_filter') &&
         array_key_exists(
-          Manager::PROGRAMME_KEY,
-          $this->heiResource[Json::LINKS_KEY]
+          OccapiProviderManager::PROGRAMME_KEY,
+          $this->heiResource[JsonDataProcessor::LINKS_KEY]
         )
       ) {
         $programme_collection = $this->providerManager
@@ -276,16 +276,16 @@ class OccapiSelectForm extends FormBase {
       if (
         $provider->get('ounit_filter') &&
         array_key_exists(
-          Manager::OUNIT_KEY,
-          $this->heiResource[Json::LINKS_KEY]
+          OccapiProviderManager::OUNIT_KEY,
+          $this->heiResource[JsonDataProcessor::LINKS_KEY]
         )
       ) {
-        $programme_collection = [Json::DATA_KEY => []];
+        $programme_collection = [JsonDataProcessor::DATA_KEY => []];
 
         $ounit_collection = $this->providerManager
           ->loadOunits($provider_id);
 
-        foreach ($ounit_collection[Json::DATA_KEY] as $i => $resource) {
+        foreach ($ounit_collection[JsonDataProcessor::DATA_KEY] as $i => $resource) {
           $ounit_id     = $this->jsonDataProcessor->getId($resource);
           $ounit_title  = $this->jsonDataProcessor->getTitle($resource);
           $ounit_label  = $ounit_title . ' (' . $ounit_id . ')';
@@ -295,16 +295,16 @@ class OccapiSelectForm extends FormBase {
 
           if (
             array_key_exists(
-              Manager::PROGRAMME_KEY,
-              $ounit_resource[Json::LINKS_KEY]
+              OccapiProviderManager::PROGRAMME_KEY,
+              $ounit_resource[JsonDataProcessor::LINKS_KEY]
             )
           ) {
             $ounit_programmes = $this->providerManager
               ->loadOunitProgrammes($provider_id, $ounit_id);
 
-            if (! empty($ounit_programmes[Json::DATA_KEY])) {
-              $partial_data = $ounit_programmes[Json::DATA_KEY];
-              $programme_collection[Json::DATA_KEY] += $partial_data;
+            if (! empty($ounit_programmes[JsonDataProcessor::DATA_KEY])) {
+              $partial_data = $ounit_programmes[JsonDataProcessor::DATA_KEY];
+              $programme_collection[JsonDataProcessor::DATA_KEY] += $partial_data;
 
               $programme_titles = $this->jsonDataProcessor
                 ->getTitles($ounit_programmes);
@@ -345,8 +345,8 @@ class OccapiSelectForm extends FormBase {
 
       if (
         \array_key_exists(
-          Manager::COURSE_KEY,
-          $programme_resource[Json::LINKS_KEY]
+          OccapiProviderManager::COURSE_KEY,
+          $programme_resource[JsonDataProcessor::LINKS_KEY]
         )
       ) {
         $course_collection = $this->providerManager
