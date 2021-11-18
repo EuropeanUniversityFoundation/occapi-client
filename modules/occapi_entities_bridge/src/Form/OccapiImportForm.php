@@ -35,6 +35,20 @@ class OccapiImportForm extends FormBase {
   protected $heiResource;
 
   /**
+   * OCCAPI Programme resource.
+   *
+   * @var array
+   */
+  protected $programmeResource;
+
+  /**
+   * OCCAPI Course collection.
+   *
+   * @var array
+   */
+  protected $courseCollection;
+
+  /**
    * Empty data placeholder.
    *
    * @var string
@@ -127,10 +141,12 @@ class OccapiImportForm extends FormBase {
     }
 
     // Parse the tempstore parameter to get the OCCAPI provider and its HEI ID.
-    $components = \explode('.', $tempstore);
+    $components   = \explode('.', $tempstore);
+    $provider_id  = $components[0];
+    $programme_id = $components[2];
 
     $provider = $this->providerManager
-      ->getProvider($components[0]);
+      ->getProvider($provider_id);
 
     $hei_id = $provider->get('hei_id');
 
@@ -144,6 +160,58 @@ class OccapiImportForm extends FormBase {
     }
     else {
       $this->messenger->addMessage($result['message']);
+    }
+
+    // Load Programme data.
+    $this->programmeResource = $this->providerManager
+      ->loadProgramme($provider_id, $programme_id);
+
+    if (empty($this->programmeResource)) {
+      $this->messenger->addError($this->t('Missing programme data!'));
+      return $form;
+    }
+
+    $programme_table = $this->dataFormatter
+      ->programmeResourceTable($this->programmeResource);
+
+    $form['programme'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Programme resource data')
+    ];
+
+    $form['programme']['data'] = [
+      '#type' => 'markup',
+      '#markup' => $programme_table
+    ];
+
+    // Load Course data.
+    if (
+      \array_key_exists(
+        OccapiProviderManager::COURSE_KEY,
+        $this->programmeResource[JsonDataProcessor::LINKS_KEY]
+      )
+    ) {
+      $this->courseCollection = $this->providerManager
+        ->loadProgrammeCourses($provider_id, $programme_id);
+
+      if (empty($this->courseCollection)) {
+        $this->messenger->addWarning($this->t('Missing course data!'));
+      }
+      else {
+        $course_table = $this->dataFormatter
+          ->courseCollectionTable($this->courseCollection);
+
+        $form['course'] = [
+          '#type' => 'details',
+          '#title' => $this->t('Course collection data')
+        ];
+
+        $form['course']['data'] = [
+          '#type' => 'markup',
+          '#markup' => $course_table
+        ];
+      }
+
     }
 
     // dpm($form);
