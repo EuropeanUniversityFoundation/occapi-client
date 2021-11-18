@@ -78,6 +78,8 @@ function occapi_entities_bridge_entity_base_field_info(EntityTypeInterface $enti
 function occapi_entities_bridge_form_course_add_form_alter(&$form, FormStateInterface $form_state) {
   _occapi_entities_bridge_api_fields($form, $form_state);
   _occapi_entities_bridge_api_metadata($form, $form_state);
+
+    dpm($form);
 }
 
 /**

@@ -144,6 +144,184 @@ class OccapiImportManager {
   }
 
   /**
+   * Get the field mapping for Programme entities.
+   *
+   * @return array $field_map
+   *   An array in the format [apiAttribute => drupal_field].
+   */
+  public function programmeFieldMap(): array {
+    $field_map = [
+      'title'                 => 'title',
+      'code'                  => 'code',
+      'description'           => 'description',
+      'ects'                  => 'ects',
+      'eqfLevelProvided'      => 'eqf_level_provided',
+      'iscedCode'             => 'isced_code',
+      'languageOfInstruction' => 'language_of_instruction',
+      'length'                => 'length',
+      'url'                   => 'url',
+    ];
+
+    return $field_map;
+  }
+
+  /**
+   * Get the field mapping for Course entities.
+   *
+   * @return array $field_map
+   *   An array in the format [apiAttribute => drupal_field].
+   */
+  public function courseFieldMap(): array {
+    $field_map = [
+      'title'                 => 'title',
+      'code'                  => 'code',
+      'description'           => 'description',
+      'learningOutcomes'      => 'learning_outcomes',
+      'ects'                  => 'ects',
+      'iscedCode'             => 'isced_code',
+      'subjectArea'           => 'subject_area',
+      'otherCategorization'   => 'other_categorization',
+      'languageOfInstruction' => 'language_of_instruction',
+      'academicTerm'          => 'academic_term',
+      'url'                   => 'url',
+    ];
+
+    return $field_map;
+  }
+
+  /**
+   * Display API fields and Drupal fields as HTML table.
+   *
+   * @param array $resource
+   *   An array containing a JSON:API resource collection.
+   *
+   * @return string
+   *   Rendered table markup.
+   */
+  public function programmeFieldTable(array $resource): string {
+    $field_map     = $this->programmeFieldMap();
+
+    $data          = $resource[JsonDataProcessor::DATA_KEY];
+
+    $links         = $data[JsonDataProcessor::LINKS_KEY];
+    $attributes    = $data[JsonDataProcessor::ATTR_KEY];
+    $relationships = $data[JsonDataProcessor::REL_KEY];
+
+    $header = [
+      $this->t('API object'),
+      $this->t('API field key'),
+      $this->t('API field value'),
+      $this->t('Drupal field key')
+    ];
+
+    $rows = [];
+
+    $obj = JsonDataProcessor::ATTR_KEY;
+
+    // Loop over attributes.
+    foreach ($attributes as $field => $field_value) {
+      $label = \implode('.', [$field]);
+
+      if (! \is_array($field_value) && ! empty($field_value)) {
+        // Print the field value.
+        $rows[] = [
+          $obj,
+          $label,
+          $attributes[$field],
+          $field_map[$field]
+        ];
+      }
+      else {
+        // Print a row with an empty value.
+        $rows[] = [$obj, $label, '-', $field_map[$field]];
+
+        if (\array_key_exists(0, $field_value)) {
+          // Loop over field values.
+          foreach ($field_value as $i => $item_value) {
+            $label = \implode('.', [$field, $i]);
+
+            if (! \is_array($item_value)) {
+              // Print the field value.
+              $rows[] = [
+                $obj,
+                $label,
+                $attributes[$field][$i],
+                $field_map[$field].'.'.$i
+              ];
+            }
+            else {
+              // Print a row with an empty value.
+              $rows[] = [
+                $obj,
+                $label,
+                $attributes[$field][$i],
+                $field_map[$field].'.'.$i
+              ];
+
+              // Expand to property level.
+              foreach ($item_value as $prop => $prop_value) {
+                $label = \implode('.', [$field, $i, $prop]);
+
+                if (! empty($prop_value)) {
+                  $rows[] = [
+                    $obj,
+                    $label,
+                    $attributes[$field][$i][$prop],
+                    $field_map[$field].'.'.$i.'.'.$prop
+                  ];
+                }
+              }
+            }
+          }
+        }
+        else {
+          // Expand to property level.
+          foreach ($field_value as $prop => $prop_value) {
+            $label = \implode('.', [$field, $prop]);
+
+            if (! \is_array($prop_value) && ! empty($field_value)) {
+              $rows[] = [
+                $obj,
+                $label,
+                $attributes[$field][$prop],
+                $field_map[$field].'.'.$prop
+              ];
+            }
+            else {
+              // Print an empty row.
+              $rows[] = [$obj, $label, '--', $field_map[$field].'.'.$prop];
+            }
+          }
+        }
+      }
+    }
+
+    // Grab the ID.
+    $rows[] = [
+      JsonDataProcessor::ID_KEY,
+      '',
+      $this->jsonDataProcessor->getId($resource),
+      self::REMOTE_ID
+    ];
+
+    // Grab the link.
+    $rows[] = [
+      JsonDataProcessor::LINKS_KEY,
+      \implode('.',[JsonDataProcessor::SELF_KEY, JsonDataProcessor::HREF_KEY]),
+      $this->jsonDataProcessor->getLink($resource, JsonDataProcessor::SELF_KEY),
+      self::REMOTE_URL
+    ];
+
+    $build['table'] = [
+      '#type' => 'table',
+      '#header' => $header,
+      '#rows' => $rows,
+    ];
+
+    return render($build);
+  }
+
+  /**
    * Validate the existence of an Institution entity.
    *
    * @param string $hei_id
@@ -182,128 +360,6 @@ class OccapiImportManager {
     $result['message'] = $message;
 
     return $result;
-  }
-
-  /**
-   * Display API fields and Drupal fields as HTML table.
-   *
-   * @param array $resource
-   *   An array containing a JSON:API resource collection.
-   *
-   * @return string
-   *   Rendered table markup.
-   */
-  public function programmeFieldTable(array $resource): string {
-    $data          = $resource[JsonDataProcessor::DATA_KEY];
-
-    $links         = $data[JsonDataProcessor::LINKS_KEY];
-    $attributes    = $data[JsonDataProcessor::ATTR_KEY];
-    $relationships = $data[JsonDataProcessor::REL_KEY];
-
-    $header = [
-      $this->t('API object'),
-      $this->t('API field key'),
-      $this->t('API field value'),
-      $this->t('Drupal field key')
-    ];
-
-    $rows = [];
-
-    // Grab the ID.
-    $rows[] = [
-      JsonDataProcessor::ID_KEY,
-      '',
-      $this->jsonDataProcessor->getId($resource),
-      self::REMOTE_ID
-    ];
-
-    $obj = JsonDataProcessor::ATTR_KEY;
-
-    // Loop over attributes.
-    foreach ($attributes as $field => $field_value) {
-      $label = \implode('.', [$field]);
-
-      if (! \is_array($field_value) && ! empty($field_value)) {
-        // Print the field value.
-        $rows[] = [
-          $obj,
-          $label,
-          $attributes[$field],
-          ''
-        ];
-      }
-      else {
-        // Print an empty row.
-        $rows[] = [$obj, $label, '-', ''];
-
-        if (\array_key_exists(0, $field_value)) {
-          // Loop over field values.
-          foreach ($field_value as $i => $item_value) {
-            $label = \implode('.', [$field, $i]);
-
-            if (! \is_array($item_value)) {
-              // Print the field value.
-              $rows[] = [
-                $obj,
-                $label,
-                $attributes[$field][$i],
-                ''
-              ];
-            }
-            else {
-              // Expand to property level.
-              foreach ($item_value as $prop => $prop_value) {
-                $label = \implode('.', [$field, $i, $prop]);
-
-                if (! empty($prop_value)) {
-                  $rows[] = [
-                    $obj,
-                    $label,
-                    $attributes[$field][$i][$prop],
-                    ''
-                  ];
-                }
-              }
-            }
-          }
-        }
-        else {
-          // Expand to property level.
-          foreach ($field_value as $prop => $prop_value) {
-            $label = \implode('.', [$field, $prop]);
-
-            if (! \is_array($prop_value) && ! empty($field_value)) {
-              $rows[] = [
-                $obj,
-                $label,
-                $attributes[$field][$prop],
-                ''
-              ];
-            }
-            else {
-              // Print an empty row.
-              $rows[] = [$obj, $label, '--', ''];
-            }
-          }
-        }
-      }
-    }
-
-    // Grab the link.
-    $rows[] = [
-      JsonDataProcessor::LINKS_KEY,
-      \implode('.',[JsonDataProcessor::SELF_KEY, JsonDataProcessor::HREF_KEY]),
-      $this->jsonDataProcessor->getLink($resource, JsonDataProcessor::SELF_KEY),
-      self::REMOTE_URL
-    ];
-
-    $build['table'] = [
-      '#type' => 'table',
-      '#header' => $header,
-      '#rows' => $rows,
-    ];
-
-    return render($build);
   }
 
 }
