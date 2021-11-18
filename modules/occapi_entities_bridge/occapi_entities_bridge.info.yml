@@ -5,6 +5,7 @@ package: OCCAPI
 core_version_requirement: ^8 || ^9
 configure: occapi_entities_bridge.settings
 dependencies:
+  - json_field:json_field
   - occapi_client:occapi_client
   - occapi_entities:occapi_entities
   - ewp_institutions:ewp_institutions

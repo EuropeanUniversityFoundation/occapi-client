@@ -29,6 +29,7 @@ class OccapiImportManager {
   // Machine names of OCCAPI extra fields.
   const REMOTE_ID  = 'remote_id';
   const REMOTE_URL = 'remote_url';
+  const JSON_META  = 'meta';
 
   /**
    * Config factory.
