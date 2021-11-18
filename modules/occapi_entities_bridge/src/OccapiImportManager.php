@@ -194,18 +194,30 @@ class OccapiImportManager {
    *
    * @param array $resource
    *   An array containing a JSON:API resource collection.
+   * @param string $entity_type
+   *   An array containing a JSON:API resource collection.
    *
    * @return string
    *   Rendered table markup.
    */
-  public function programmeFieldTable(array $resource): string {
-    $field_map     = $this->programmeFieldMap();
+  public function fieldTable(array $resource, string $entity_type): string {
+    switch ($entity_type) {
+      case self::PROGRAMME_ENTITY:
+        $field_map = $this->programmeFieldMap();
+        break;
 
-    $data          = $resource[JsonDataProcessor::DATA_KEY];
+      case self::COURSE_ENTITY:
+        $field_map = $this->courseFieldMap();
+        break;
 
-    $links         = $data[JsonDataProcessor::LINKS_KEY];
-    $attributes    = $data[JsonDataProcessor::ATTR_KEY];
-    $relationships = $data[JsonDataProcessor::REL_KEY];
+      default:
+        return '<em>' . $this->t('Nothing to display.') . '</em>';
+        break;
+    }
+
+    $data = (\array_key_exists(JsonDataProcessor::DATA_KEY, $resource)) ?
+      $resource[JsonDataProcessor::DATA_KEY] :
+      $resource;
 
     $header = [
       $this->t('API object'),
@@ -216,101 +228,140 @@ class OccapiImportManager {
 
     $rows = [];
 
-    $obj = JsonDataProcessor::ATTR_KEY;
+    if (\array_key_exists(JsonDataProcessor::LINKS_KEY, $data)) {
+      $links = $data[JsonDataProcessor::LINKS_KEY];
+    }
 
-    // Loop over attributes.
-    foreach ($attributes as $field => $field_value) {
-      $label = \implode('.', [$field]);
+    if (\array_key_exists(JsonDataProcessor::REL_KEY, $data)) {
+      $relationships = $data[JsonDataProcessor::REL_KEY];
+    }
 
-      if (! \is_array($field_value) && ! empty($field_value)) {
-        // Print the field value.
-        $rows[] = [
-          $obj,
-          $label,
-          $attributes[$field],
-          $field_map[$field]
-        ];
-      }
-      else {
-        // Print a row with an empty value.
-        $rows[] = [$obj, $label, '-', $field_map[$field]];
+    if (\array_key_exists(JsonDataProcessor::ATTR_KEY, $data)) {
+      $attributes = $data[JsonDataProcessor::ATTR_KEY];
 
-        if (\array_key_exists(0, $field_value)) {
-          // Loop over field values.
-          foreach ($field_value as $i => $item_value) {
-            $label = \implode('.', [$field, $i]);
+      $obj = JsonDataProcessor::ATTR_KEY;
 
-            if (! \is_array($item_value)) {
-              // Print the field value.
-              $rows[] = [
-                $obj,
-                $label,
-                $attributes[$field][$i],
-                $field_map[$field].'.'.$i
-              ];
-            }
-            else {
-              // Print a row with an empty value.
-              $rows[] = [
-                $obj,
-                $label,
-                $attributes[$field][$i],
-                $field_map[$field].'.'.$i
-              ];
+      // Loop over attributes.
+      foreach ($attributes as $field => $field_value) {
+        $label = \implode('.', [$field]);
+        if (! empty($field_value)) {
+          if (! \is_array($field_value)) {
+            // Print the field value.
+            $rows[] = [
+              $obj,
+              $label,
+              $attributes[$field],
+              (\array_key_exists($field, $field_map)) ? $field_map[$field] : ''
+            ];
+          }
+          else {
+            // Print a row with an empty value.
+            $rows[] = [
+              $obj,
+              $label,
+              '',
+              (\array_key_exists($field, $field_map)) ? $field_map[$field] : ''
+            ];
 
-              // Expand to property level.
-              foreach ($item_value as $prop => $prop_value) {
-                $label = \implode('.', [$field, $i, $prop]);
+            if (\array_key_exists(0, $field_value)) {
+              // Loop over field values.
+              foreach ($field_value as $i => $item_value) {
+                $label = \implode('.', [$field, $i]);
 
-                if (! empty($prop_value)) {
+                if (! \is_array($item_value)) {
+                  // Print the field value.
                   $rows[] = [
                     $obj,
                     $label,
-                    $attributes[$field][$i][$prop],
-                    $field_map[$field].'.'.$i.'.'.$prop
+                    $attributes[$field][$i],
+                    (\array_key_exists($field, $field_map)) ? $field_map[$field].'.'.$i : ''
+                  ];
+                }
+                else {
+                  // Print a row with an empty value.
+                  $rows[] = [
+                    $obj,
+                    $label,
+                    $attributes[$field][$i],
+                    (\array_key_exists($field, $field_map)) ? $field_map[$field].'.'.$i : ''
+                  ];
+
+                  // Expand to property level.
+                  foreach ($item_value as $prop => $prop_value) {
+                    $label = \implode('.', [$field, $i, $prop]);
+
+                    if (! empty($prop_value)) {
+                      $rows[] = [
+                        $obj,
+                        $label,
+                        $attributes[$field][$i][$prop],
+                        (\array_key_exists($field, $field_map)) ? $field_map[$field].'.'.$i.'.'.$prop : ''
+                      ];
+                    }
+                  }
+                }
+              }
+            }
+            else {
+              // Expand to property level.
+              foreach ($field_value as $prop => $prop_value) {
+                $label = \implode('.', [$field, $prop]);
+
+                if (! \is_array($prop_value) && ! empty($field_value)) {
+                  $rows[] = [
+                    $obj,
+                    $label,
+                    $attributes[$field][$prop],
+                    (\array_key_exists($field, $field_map)) ? $field_map[$field].'.'.$prop : ''
+                  ];
+                }
+                else {
+                  // Print an empty row.
+                  $rows[] = [
+                    $obj,
+                    $label,
+                    '',
+                    (\array_key_exists($field, $field_map)) ? $field_map[$field].'.'.$prop : ''
                   ];
                 }
               }
             }
           }
         }
-        else {
-          // Expand to property level.
-          foreach ($field_value as $prop => $prop_value) {
-            $label = \implode('.', [$field, $prop]);
-
-            if (! \is_array($prop_value) && ! empty($field_value)) {
-              $rows[] = [
-                $obj,
-                $label,
-                $attributes[$field][$prop],
-                $field_map[$field].'.'.$prop
-              ];
-            }
-            else {
-              // Print an empty row.
-              $rows[] = [$obj, $label, '--', $field_map[$field].'.'.$prop];
-            }
-          }
-        }
       }
+
+      // Grab the ID.
+      $rows[] = [
+        JsonDataProcessor::ID_KEY,
+        '',
+        $this->jsonDataProcessor->getId($resource),
+        self::REMOTE_ID
+      ];
+
+      // Grab the link.
+      $rows[] = [
+        JsonDataProcessor::LINKS_KEY,
+        \implode('.',[JsonDataProcessor::SELF_KEY, JsonDataProcessor::HREF_KEY]),
+        $this->jsonDataProcessor->getLink($resource, JsonDataProcessor::SELF_KEY),
+        self::REMOTE_URL
+      ];
     }
 
-    // Grab the ID.
-    $rows[] = [
-      JsonDataProcessor::ID_KEY,
-      '',
-      $this->jsonDataProcessor->getId($resource),
-      self::REMOTE_ID
-    ];
+    if ($entity_type === self::COURSE_ENTITY) {
+      if (\array_key_exists(JsonDataProcessor::META_KEY, $data)) {
+        $metadata = $data[JsonDataProcessor::META_KEY];
 
-    // Grab the link.
-    $rows[] = [
-      JsonDataProcessor::LINKS_KEY,
-      \implode('.',[JsonDataProcessor::SELF_KEY, JsonDataProcessor::HREF_KEY]),
-      $this->jsonDataProcessor->getLink($resource, JsonDataProcessor::SELF_KEY),
-      self::REMOTE_URL
-    ];
+        dpm($metadata);
+
+        // Grab the metadata.
+        $rows[] = [
+          JsonDataProcessor::META_KEY,
+          '',
+          \json_encode($metadata, JSON_PRETTY_PRINT),
+          self::JSON_META
+        ];
+      }
+    }
 
     $build['table'] = [
       '#type' => 'table',

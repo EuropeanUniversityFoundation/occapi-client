@@ -23,6 +23,7 @@ class JsonDataProcessor {
   const ID_KEY    = 'id';
   const ATTR_KEY  = 'attributes';
   const REL_KEY   = 'relationships';
+  const META_KEY  = 'meta';
 
   // OCCAPI title field.
   const TITLE_KEY = 'title';

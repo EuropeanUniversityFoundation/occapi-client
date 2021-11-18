@@ -214,11 +214,17 @@ class OccapiImportForm extends FormBase {
     }
 
     $programme_field_table = $this->importManager
-      ->programmeFieldTable($this->programmeResource);
+      ->fieldTable($this->programmeResource, Manager::PROGRAMME_ENTITY);
+
+    $sample_course = $this->courseCollection[JsonDataProcessor::DATA_KEY][0];
+
+    $course_field_table = $this->importManager
+      ->fieldTable($sample_course, Manager::COURSE_ENTITY);
 
     $form['preview'] = [
       '#type' => 'markup',
-      '#markup' => $programme_field_table
+      // '#markup' => $programme_field_table,
+      '#markup' => $course_field_table,
     ];
 
     // dpm($form);
