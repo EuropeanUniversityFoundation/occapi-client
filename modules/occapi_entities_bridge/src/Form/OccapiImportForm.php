@@ -117,7 +117,11 @@ class OccapiImportForm extends FormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state, string $tempstore = NULL) {
     // Give a user with permission the opportunity to add an entity manually.
-    if ($this->currentUser->hasPermission('bypass import occapi entities')) {
+    if (
+      $this->currentUser->hasPermission('create programme') &&
+      $this->currentUser->hasPermission('create course') &&
+      $this->currentUser->hasPermission('bypass import occapi entities')
+    ) {
       $add_programme_link = Link::fromTextAndUrl(t('add a new Programme'),
         Url::fromRoute('entity.programme.add_form'))->toString();
       $add_course_link = Link::fromTextAndUrl(t('add a new Course'),
