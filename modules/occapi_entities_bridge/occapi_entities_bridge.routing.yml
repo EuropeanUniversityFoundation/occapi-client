@@ -58,10 +58,14 @@ occapi_entities_bridge.import_programme_courses:
       tempstore:
         type: tempstore
 
-occapi_entities_bridge.import_course_bulk:
-  path: '/admin/structure/occapi/course/import_bulk'
+occapi_entities_bridge.import_course_multiple:
+  path: '/admin/structure/occapi/course/import_multiple/{tempstore}'
   defaults:
     _title: 'Import courses'
-    _controller: '\Drupal\occapi_entities_bridge\Controller\OccapiCourseImportController::bulkImport'
+    _controller: '\Drupal\occapi_entities_bridge\Controller\OccapiCourseImportController::importMultiple'
   requirements:
     _permission: 'create course'
+  options:
+    parameters:
+      tempstore:
+        type: tempstore

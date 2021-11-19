@@ -358,8 +358,6 @@ class OccapiImportManager {
       if (\array_key_exists(JsonDataProcessor::META_KEY, $data)) {
         $metadata = $data[JsonDataProcessor::META_KEY];
 
-        dpm($metadata);
-
         // Grab the metadata.
         $rows[] = [
           JsonDataProcessor::META_KEY,

@@ -185,7 +185,8 @@ class OccapiImportForm extends FormBase {
 
     $form['programme'] = [
       '#type' => 'details',
-      '#title' => $this->t('Programme resource data')
+      '#title' => $this->t('Programme resource data'),
+      '#open' => TRUE
     ];
 
     $form['programme']['data'] = [
@@ -239,17 +240,22 @@ class OccapiImportForm extends FormBase {
 
     $form['actions'] = [
       '#type' => 'actions',
-      '#weight' => '-6',
     ];
 
-    $form['actions']['import'] = [
+    $form['actions']['import_all'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Import'),
+      '#value' => $this->t('Import all'),
       '#attributes' => [
         'class' => [
           'button--primary',
         ]
       ],
+    ];
+
+    $form['actions']['import'] = [
+      '#type' => 'submit',
+      '#submit' => ['::importProgramme'],
+      '#value' => $this->t('Import Programme'),
     ];
 
     // dpm($form);
@@ -261,6 +267,23 @@ class OccapiImportForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
+    // Prevent the messenger service from rendering the messages again.
+    $this->messenger->deleteAll();
+
+    $tempstore = $form_state->getValue('programme_tempstore');
+
+    $form_state->setRedirect('occapi_entities_bridge.import_programme_courses',[
+      'tempstore' => $tempstore
+    ]);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function importProgramme(array &$form, FormStateInterface $form_state) {
+    // Prevent the messenger service from rendering the messages again.
+    $this->messenger->deleteAll();
+
     $tempstore = $form_state->getValue('programme_tempstore');
 
     $form_state->setRedirect('occapi_entities_bridge.import_programme',[
