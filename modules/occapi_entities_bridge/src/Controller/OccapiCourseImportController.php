@@ -12,7 +12,7 @@ class OccapiCourseImportController extends ControllerBase {
   /**
    * Builds the response.
    */
-  public function build() {
+  public function bulkImport() {
 
     $build['content'] = [
       '#type' => 'item',

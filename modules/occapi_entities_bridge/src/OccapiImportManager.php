@@ -27,6 +27,13 @@ class OccapiImportManager {
   const PROGRAMME_ENTITY = 'programme';
   const COURSE_ENTITY    = 'course';
 
+  // Machine name of the entity label.
+  const LABEL_KEY = 'label';
+
+  // Machine names of entity reference fields.
+  const REF_HEI       = 'hei';
+  const REF_PROGRAMME = 'related_programme';
+
   // Machine names of OCCAPI extra fields.
   const REMOTE_ID  = 'remote_id';
   const REMOTE_URL = 'remote_url';
@@ -195,7 +202,7 @@ class OccapiImportManager {
    * @param array $resource
    *   An array containing a JSON:API resource collection.
    * @param string $entity_type
-   *   An array containing a JSON:API resource collection.
+   *   The target OCCAPI entity type.
    *
    * @return string
    *   Rendered table markup.
@@ -411,6 +418,161 @@ class OccapiImportManager {
     $result['message'] = $message;
 
     return $result;
+  }
+
+  /**
+   * Get the ID of a Programme entity;
+   *   optionally, create a new entity from a TempStore.
+   *
+   * @param string $tempstore
+   *   TempStore key with programme data.
+   *
+   * @return array|NULL
+   *   An array of [id => Drupal\occapi_entities\Entity\Programme].
+   */
+  public function getProgramme(string $tempstore): ?array {
+    // Validate the tempstore parameter.
+    $error = $this->providerManager
+      ->validateResourceTempstore($tempstore, OccapiProviderManager::PROGRAMME_KEY);
+
+    if ($error) {
+      $this->messenger->addError($error);
+      return NULL;
+    }
+
+    // Parse the tempstore parameter to get the OCCAPI provider and its HEI ID.
+    $components   = \explode('.', $tempstore);
+    $provider_id  = $components[0];
+    $programme_id = $components[2];
+
+    // Check if an entity with the same remote ID already exists.
+    $exists = $this->entityTypeManager
+      ->getStorage(self::PROGRAMME_ENTITY)
+      ->loadByProperties([self::REMOTE_ID => $programme_id]);
+
+    // Create a new entity if none exists.
+    if (empty($exists)) {
+      $new = $this->createProgrammme($provider_id, $programme_id);
+
+      if (! empty($new)) {
+        $exists = $this->entityTypeManager
+          ->getStorage(self::PROGRAMME_ENTITY)
+          ->loadByProperties([self::REMOTE_ID => $programme_id]);
+
+        foreach ($exists as $id => $programme) {
+          $renderable = $programme->toLink()->toRenderable();
+        }
+        $message = $this->t('Programme successfully created: @link', [
+          '@link' => render($renderable),
+        ]);
+        $this->messenger->addMessage($message);
+      }
+      else {
+        $message = $this->t('Programme cannot be created');
+        $this->messenger->addError($message);
+      }
+    }
+    else {
+      foreach ($exists as $id => $programme) {
+        $renderable = $programme->toLink()->toRenderable();
+      }
+      $message = $this->t('Programme already exists: @link', [
+        '@link' => render($renderable),
+      ]);
+      $this->messenger->addWarning($message);
+    }
+
+    return $exists;
+  }
+
+  /**
+   * Create a new Programme entity.
+   *
+   * @param string $provider_id
+   *   Key found in the API Index.
+   * @param string $programme_id
+   *   Key found in the HEI list.
+   *
+   * @return array|NULL
+   *   An array of [id => Drupal\occapi_entities\Entity\Programme].
+   */
+  private function createProgrammme($provider_id, $programme_id): ?array {
+    $provider = $this->providerManager
+      ->getProvider($provider_id);
+
+    $hei_id = $provider->get('hei_id');
+
+    // Check if the Institution is present in the system.
+    $result = $this->validateInstitution($hei_id);
+
+    if (! $result['status']) {
+      $this->messenger->addError($result['message']);
+      return NULL;
+    }
+    else {
+      $this->messenger->addMessage($result['message']);
+    }
+
+    // Load Programme data.
+    $resource = $this->providerManager
+      ->loadProgramme($provider_id, $programme_id);
+
+    if (empty($resource)) {
+      $this->messenger->addError($this->t('Missing programme data!'));
+      return NULL;
+    }
+
+    $data = (\array_key_exists(JsonDataProcessor::DATA_KEY, $resource)) ?
+      $resource[JsonDataProcessor::DATA_KEY] :
+      $resource;
+
+    if (! \array_key_exists(JsonDataProcessor::ATTR_KEY, $data)) {
+      $this->messenger->addError($this->t('Missing programme attributes!'));
+      return NULL;
+    }
+
+    $attributes = $data[JsonDataProcessor::ATTR_KEY];
+
+    // Assemble data array for the new entity.
+    $entity_data = [];
+
+    // Start with the label.
+    $entity_data[self::LABEL_KEY] = $this->jsonDataProcessor
+      ->getTitle($resource);
+
+    // Handle the attributes.
+    $field_map = $this->programmeFieldMap();
+
+    foreach ($field_map as $key => $value) {
+      $entity_data[$value] = $attributes[$key];
+    }
+
+    // Handle the entity references.
+    $hei = $this->heiManager
+      ->getInstitution($hei_id);
+
+    foreach ($hei as $id => $value) {
+      $entity_data[self::REF_HEI] = ['target_id' => $id];
+    }
+
+    // Finally the remote API fields.
+    $entity_data[self::REMOTE_ID] = $this->jsonDataProcessor
+      ->getId($resource);
+
+    $entity_data[self::REMOTE_URL] = $this->jsonDataProcessor
+      ->getLink($resource, JsonDataProcessor::SELF_KEY);
+
+    // Create the new entity.
+    $new_entity = $this->entityTypeManager
+      ->getStorage(self::PROGRAMME_ENTITY)
+      ->create($entity_data);
+    $new_entity->save();
+
+    $created = $this->entityTypeManager
+      ->getStorage(self::PROGRAMME_ENTITY)
+      ->loadByProperties([self::REMOTE_ID => $programme_id]);
+
+    return $created;
   }
 
 }

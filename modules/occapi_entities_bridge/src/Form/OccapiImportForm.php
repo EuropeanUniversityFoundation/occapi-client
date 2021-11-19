@@ -178,6 +178,11 @@ class OccapiImportForm extends FormBase {
     $programme_table = $this->dataFormatter
       ->programmeResourceTable($this->programmeResource);
 
+    $form['programme_tempstore'] = [
+      '#type' => 'value',
+      '#value' => $tempstore
+    ];
+
     $form['programme'] = [
       '#type' => 'details',
       '#title' => $this->t('Programme resource data')
@@ -228,7 +233,23 @@ class OccapiImportForm extends FormBase {
     $form['preview'] = [
       '#type' => 'markup',
       // '#markup' => $programme_field_table,
-      '#markup' => $course_field_table,
+      // '#markup' => $course_field_table,
+      '#markup' => ''
+    ];
+
+    $form['actions'] = [
+      '#type' => 'actions',
+      '#weight' => '-6',
+    ];
+
+    $form['actions']['import'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Import'),
+      '#attributes' => [
+        'class' => [
+          'button--primary',
+        ]
+      ],
     ];
 
     // dpm($form);
@@ -240,7 +261,11 @@ class OccapiImportForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
+    $tempstore = $form_state->getValue('programme_tempstore');
 
+    $form_state->setRedirect('occapi_entities_bridge.import_programme',[
+      'tempstore' => $tempstore
+    ]);
   }
 
 }

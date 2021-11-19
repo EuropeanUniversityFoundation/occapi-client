@@ -206,7 +206,7 @@ class OccapiSelectForm extends FormBase {
 
     $form['actions']['import'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Import'),
+      '#value' => $this->t('Load Import form'),
       '#attributes' => [
         'class' => [
           'button--primary',
