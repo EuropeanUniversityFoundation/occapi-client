@@ -33,3 +33,19 @@ occapi_entities_bridge.import_confirm:
     _title: 'Confirm OCCAPI entities import'
   requirements:
     _permission: 'administer course.administer programme'
+
+occapi_entities_bridge.import_programme:
+  path: '/admin/structure/occapi/programme/import'
+  defaults:
+    _title: 'Import programme'
+    _controller: '\Drupal\occapi_entities_bridge\Controller\OccapiProgrammeImportController::build'
+  requirements:
+    _permission: 'create programme'
+
+occapi_entities_bridge.import_course_bulk:
+  path: '/admin/structure/occapi/course/import_bulk'
+  defaults:
+    _title: 'Import courses'
+    _controller: '\Drupal\occapi_entities_bridge\Controller\OccapiCourseImportController::build'
+  requirements:
+    _permission: 'create course'
