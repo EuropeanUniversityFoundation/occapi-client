@@ -90,6 +90,7 @@ class OccapiProgrammeImportController extends ControllerBase {
       ->getProgramme($tempstore);
 
     if (!empty($programme)) {
+      $tempstore .= '.' . OccapiImportManager::COURSE_ENTITY;
       $params = ['tempstore' => $tempstore];
       $route = 'occapi_entities_bridge.import_course_multiple';
       return $this->redirect($route, $params);

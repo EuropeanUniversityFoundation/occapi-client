@@ -612,10 +612,15 @@ class OccapiImportManager {
     $failed_items = [];
 
     if ($filter === self::PROGRAMME_ENTITY) {
-      $collection = loadProgrammeCourses($provider_id, $resource_id);
+      $collection = $this->providerManager
+        ->loadProgrammeCourses($provider_id, $resource_id);
 
-      if (! empty($collection)) {
-        foreach ($collection as $i => $item) {
+      if (
+        ! empty($collection) &&
+        \array_key_exists(JsonDataProcessor::DATA_KEY, $collection) &&
+        ! empty($collection[JsonDataProcessor::DATA_KEY])
+      ) {
+        foreach ($collection[JsonDataProcessor::DATA_KEY] as $i => $item) {
           $item_id = $this->jsonDataProcessor->getId($item);
 
           // Check if an entity with the same remote ID already exists.

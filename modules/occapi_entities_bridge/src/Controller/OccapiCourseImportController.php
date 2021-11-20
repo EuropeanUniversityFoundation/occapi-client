@@ -59,10 +59,19 @@ class OccapiCourseImportController extends ControllerBase {
    *
    * @param string $tempstore
    *   The TempStore key.
+   * @param string $filter
+   *   OCCAPI entity type key used as filter.
    *
    * @return RedirectResponse
    */
   public function importMultiple(string $tempstore): RedirectResponse {
+    // Parse the tempstore key to get the OCCAPI filter entity type.
+    $components  = \explode('.', $tempstore);
+    $filter = $components[1];
+
+    $courses = $this->importManager
+      ->getCourses($tempstore, $filter);
+
     return $this->redirect('<front>');
   }
 
