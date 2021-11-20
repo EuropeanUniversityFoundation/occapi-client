@@ -630,7 +630,16 @@ class OccapiImportManager {
 
           // Create a new entity if none exists.
           if (empty($exists)) {
-            $new = $this->createCourse($provider_id, $item);
+            // Check if a Programme with the same remote ID already exists.
+            $programme = $this->entityTypeManager
+              ->getStorage(self::PROGRAMME_ENTITY)
+              ->loadByProperties([self::REMOTE_ID => $resource_id]);
+
+            foreach ($programme as $id => $entity) {
+              $programme_id = $id;
+            }
+
+            $new = $this->createCourse($provider_id, $item, $programme_id);
 
             if (! empty($new)) {
               $exists = $this->entityTypeManager
@@ -638,7 +647,7 @@ class OccapiImportManager {
                 ->loadByProperties([self::REMOTE_ID => $item_id]);
 
               foreach ($exists as $id => $entity) {
-                $created_items[$id] = $entity;;
+                $created_items[$id] = $entity;
               }
             }
             else {
