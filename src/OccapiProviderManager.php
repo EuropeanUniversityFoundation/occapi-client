@@ -141,6 +141,67 @@ class OccapiProviderManager {
   }
 
   /**
+   * Validate a collection tempstore key.
+   *
+   * @param string $tempstore
+   *   TempStore key to validate.
+   * @param string $filter|NULL
+   *   OCCAPI entity type key used as filter.
+   * @param string $type|NULL
+   *   OCCAPI entity type key to validate.
+   *
+   * @return string|NULL
+   *   The error message if any error is detected.
+   */
+  public function validateCollectionTempstore(string $tempstore, string $filter = NULL, string $type = NULL): ?string {
+    // Parse the tempstore parameter.
+    $components = \explode('.', $tempstore);
+
+    // TempStore key format for a resource collection must have 4 components.
+    if (\count($components) < 4) {
+      return $this->t('Invalid TempStore key format.');
+    }
+
+    // Validate the TempStore key for the parent resource.
+    $parent_tempstore = \implode('.', [
+      $components[0],
+      $components[1],
+      $components[2]
+    ]);
+
+    $error = $this->validateResourceTempstore($parent_tempstore, $filter);
+
+    if (! empty($error)) {
+      return $error;
+    }
+
+    // The fourth component must be a known OCCAPI entity type.
+    $valid_types = [self::PROGRAMME_KEY, self::COURSE_KEY];
+
+    if (! \in_array($components[3], $valid_types)) {
+      return $this->t('Unknown OCCAPI entity type.');
+    }
+
+    // If a type is specified, it must itself be validated.
+    if (! empty($type) && ! \in_array($type, $valid_types)) {
+      $type = NULL;
+    }
+
+    // If a type is specified, the second component must be the same.
+    if (! empty($type) && $components[3] !== $type) {
+      return $this->t('Invalid OCCAPI entity type.');
+    }
+
+    // The tempstore must be populated already.
+    if (empty($this->jsonDataFetcher->checkUpdated($tempstore))) {
+      return $this->t('TempStore is not available.');
+    }
+
+    // No errors found.
+    return NULL;
+  }
+
+  /**
    * Validate a resource tempstore key.
    *
    * @param string $tempstore
@@ -151,7 +212,7 @@ class OccapiProviderManager {
    * @return string|NULL
    *   The error message if any error is detected.
    */
-  public function validateResourceTempstore(string $tempstore, string $validate_type = NULL): ?string {
+  public function validateResourceTempstore(string $tempstore, string $type = NULL): ?string {
     // Parse the tempstore parameter.
     $components = \explode('.', $tempstore);
 
@@ -179,19 +240,13 @@ class OccapiProviderManager {
       return $this->t('Unknown OCCAPI entity type.');
     }
 
-    // If a validate_type is specified, it must itself be validated.
-    if (
-      ! empty($validate_type) &&
-      ! \in_array($validate_type, $valid_types)
-    ) {
-      $validate_type = NULL;
+    // If a type is specified, it must itself be validated.
+    if (! empty($type) && ! \in_array($type, $valid_types)) {
+      $type = NULL;
     }
 
-    // If a validate_type is specified, the second component must be the same.
-    if (
-      ! empty($validate_type) &&
-      $components[1] !== $validate_type
-    ) {
+    // If a type is specified, the second component must be the same.
+    if (! empty($type) && $components[1] !== $type) {
       return $this->t('Invalid OCCAPI entity type.');
     }
 
