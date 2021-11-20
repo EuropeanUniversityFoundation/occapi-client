@@ -431,34 +431,37 @@ class OccapiImportManager {
   public function getProgramme(string $tempstore): ?array {
     // Validate the tempstore parameter.
     $error = $this->providerManager
-      ->validateResourceTempstore($tempstore, OccapiProviderManager::PROGRAMME_KEY);
+      ->validateResourceTempstore(
+        $tempstore,
+        OccapiProviderManager::PROGRAMME_KEY
+      );
 
     if ($error) {
       $this->messenger->addError($error);
       return NULL;
     }
 
-    // Parse the tempstore parameter to get the OCCAPI provider and its HEI ID.
-    $components   = \explode('.', $tempstore);
-    $provider_id  = $components[0];
-    $programme_id = $components[2];
+    // Parse the tempstore key to get the OCCAPI provider and the resource ID.
+    $components  = \explode('.', $tempstore);
+    $provider_id = $components[0];
+    $resource_id = $components[2];
 
     // Check if an entity with the same remote ID already exists.
     $exists = $this->entityTypeManager
       ->getStorage(self::PROGRAMME_ENTITY)
-      ->loadByProperties([self::REMOTE_ID => $programme_id]);
+      ->loadByProperties([self::REMOTE_ID => $resource_id]);
 
     // Create a new entity if none exists.
     if (empty($exists)) {
-      $new = $this->createProgrammme($provider_id, $programme_id);
+      $new = $this->createProgrammme($provider_id, $resource_id);
 
       if (! empty($new)) {
         $exists = $this->entityTypeManager
           ->getStorage(self::PROGRAMME_ENTITY)
-          ->loadByProperties([self::REMOTE_ID => $programme_id]);
+          ->loadByProperties([self::REMOTE_ID => $resource_id]);
 
-        foreach ($exists as $id => $programme) {
-          $renderable = $programme->toLink()->toRenderable();
+        foreach ($exists as $id => $entity) {
+          $renderable = $entity->toLink()->toRenderable();
         }
         $message = $this->t('Programme successfully created: @link', [
           '@link' => render($renderable),
@@ -471,8 +474,8 @@ class OccapiImportManager {
       }
     }
     else {
-      foreach ($exists as $id => $programme) {
-        $renderable = $programme->toLink()->toRenderable();
+      foreach ($exists as $id => $entity) {
+        $renderable = $entity->toLink()->toRenderable();
       }
       $message = $this->t('Programme already exists: @link', [
         '@link' => render($renderable),
@@ -487,14 +490,14 @@ class OccapiImportManager {
    * Create a new Programme entity.
    *
    * @param string $provider_id
-   *   Key found in the API Index.
+   *   The OCCAPI provider ID.
    * @param string $programme_id
    *   Key found in the HEI list.
    *
    * @return array|NULL
    *   An array of [id => Drupal\occapi_entities\Entity\Programme].
    */
-  private function createProgrammme($provider_id, $programme_id): ?array {
+  private function createProgrammme(string $provider_id, string $programme_id): ?array {
     $provider = $this->providerManager
       ->getProvider($provider_id);
 
@@ -569,6 +572,203 @@ class OccapiImportManager {
     $created = $this->entityTypeManager
       ->getStorage(self::PROGRAMME_ENTITY)
       ->loadByProperties([self::REMOTE_ID => $programme_id]);
+
+    return $created;
+  }
+
+  /**
+   * Get the ID of a Course entity;
+   *   optionally, create a new entity from a TempStore.
+   *
+   * @param string $tempstore
+   *   TempStore key with course data.
+   * @param string $filter
+   *   OCCAPI entity type key used as filter.
+   *
+   * @return array|NULL
+   *   An array of [id => Drupal\occapi_entities\Entity\Course].
+   */
+  public function getCourses(string $tempstore, string $filter): ?array {
+    // Validate the tempstore parameter.
+    $error = $this->providerManager
+      ->validateCollectionTempstore(
+        $tempstore,
+        $filter,
+        OccapiProviderManager::COURSE_KEY,
+      );
+
+    if ($error) {
+      $this->messenger->addError($error);
+      return NULL;
+    }
+
+    // Parse the tempstore key to get the OCCAPI provider and the resource ID.
+    $components  = \explode('.', $tempstore);
+    $provider_id = $components[0];
+    $resource_id = $components[2];
+
+    $existing_items = [];
+    $created_items = [];
+    $failed_items = [];
+
+    if ($filter === self::PROGRAMME_ENTITY) {
+      $collection = loadProgrammeCourses($provider_id, $resource_id);
+
+      if (! empty($collection)) {
+        foreach ($collection as $i => $item) {
+          $item_id = $this->jsonDataProcessor->getId($item);
+
+          // Check if an entity with the same remote ID already exists.
+          $exists = $this->entityTypeManager
+            ->getStorage(self::COURSE_ENTITY)
+            ->loadByProperties([self::REMOTE_ID => $item_id]);
+
+          // Create a new entity if none exists.
+          if (empty($exists)) {
+            $new = $this->createCourse($provider_id, $item);
+
+            if (! empty($new)) {
+              $exists = $this->entityTypeManager
+                ->getStorage(self::COURSE_ENTITY)
+                ->loadByProperties([self::REMOTE_ID => $item_id]);
+
+              foreach ($exists as $id => $entity) {
+                $created_items[$id] = $entity;;
+              }
+            }
+            else {
+              $failed_items[] = $item_id;
+            }
+          }
+          else {
+            foreach ($exists as $id => $entity) {
+              $existing_items[$id] = $entity;
+            }
+          }
+        }
+      }
+    }
+
+    // Count the occurrences and issue messages accordingly.
+    if (! empty($created_items)) {
+      $message = $this->t('Successfully created @count Courses.', [
+        '@count' => \count($created_items),
+      ]);
+      $this->messenger->addMessage($message);
+    }
+
+    if (! empty($existing_items)) {
+      $message = $this->t('Found @count already existing Courses.', [
+        '@count' => \count($existing_items),
+      ]);
+      $this->messenger->addWarning($message);
+    }
+
+    if (! empty($failed_items)) {
+      $message = $this->t('Failed to import @count Courses', [
+        '@count' => \count($failed_items),
+      ]);
+      $this->messenger->addMessage($message);
+    }
+
+    $courses = $created_items + $existing_items;
+
+    if (! empty($courses)) {
+      return $courses;
+    }
+
+    return NULL;
+  }
+
+  /**
+   * Create a new Course entity.
+   *
+   * @param string $provider_id
+   *   The OCCAPI provider ID.
+   * @param array $resource
+   *   The resource array for the Course entity.
+   * @param string $programme_id|NULL
+   *   The resource ID for a related Programme entity.
+   *
+   * @return array|NULL
+   *   An array of [id => Drupal\occapi_entities\Entity\Course].
+   */
+  private function createCourse(string $provider_id, array $resource, string $programme_id = NULL): ?array {
+    if (empty($resource)) {
+      return NULL;
+    }
+
+    $provider = $this->providerManager
+      ->getProvider($provider_id);
+
+    $hei_id = $provider->get('hei_id');
+
+    // Check if the Institution is present in the system.
+    $result = $this->validateInstitution($hei_id);
+
+    if (! $result['status']) {
+      return NULL;
+    }
+
+    $data = (\array_key_exists(JsonDataProcessor::DATA_KEY, $resource)) ?
+      $resource[JsonDataProcessor::DATA_KEY] :
+      $resource;
+
+    if (! \array_key_exists(JsonDataProcessor::ATTR_KEY, $data)) {
+      return NULL;
+    }
+
+    $attributes = $data[JsonDataProcessor::ATTR_KEY];
+
+    // Assemble data array for the new entity.
+    $entity_data = [];
+
+    // Start with the label.
+    $entity_data[self::LABEL_KEY] = $this->jsonDataProcessor
+      ->getTitle($resource);
+
+    // Handle the attributes.
+    $field_map = $this->courseFieldMap();
+
+    foreach ($field_map as $key => $value) {
+      $entity_data[$value] = $attributes[$key];
+    }
+
+    // Handle the entity references.
+    $hei = $this->heiManager
+      ->getInstitution($hei_id);
+
+    foreach ($hei as $id => $value) {
+      $entity_data[self::REF_HEI] = ['target_id' => $id];
+    }
+
+    if (! empty($programme_id)) {
+      $entity_data[self::REF_PROGRAMME] = ['target_id' => $programme_id];
+    }
+
+    // Finally the remote API fields.
+    $resource_id = $this->jsonDataProcessor
+      ->getId($resource);
+
+    $entity_data[self::REMOTE_ID] = $resource_id;
+
+    $entity_data[self::REMOTE_URL] = $this->jsonDataProcessor
+      ->getLink($resource, JsonDataProcessor::SELF_KEY);
+
+    if (\array_key_exists(JsonDataProcessor::META_KEY, $data)) {
+      $json_metadata = \json_encode($data[JsonDataProcessor::META_KEY]);
+      $entity_data[self::JSON_META] = $json_metadata;
+    }
+
+    // Create the new entity.
+    $new_entity = $this->entityTypeManager
+      ->getStorage(self::COURSE_ENTITY)
+      ->create($entity_data);
+    $new_entity->save();
+
+    $created = $this->entityTypeManager
+      ->getStorage(self::COURSE_ENTITY)
+      ->loadByProperties([self::REMOTE_ID => $resource_id]);
 
     return $created;
   }
