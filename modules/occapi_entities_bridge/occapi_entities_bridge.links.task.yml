@@ -1,0 +1,9 @@
+entity.programme.api:
+  route_name: entity.programme.api_form
+  base_route: entity.programme.canonical
+  title: API
+
+entity.course.api:
+  route_name: entity.course.api_form
+  base_route: entity.course.canonical
+  title: API

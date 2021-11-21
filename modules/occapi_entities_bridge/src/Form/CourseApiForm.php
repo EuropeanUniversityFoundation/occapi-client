@@ -23,20 +23,12 @@ class CourseApiForm extends CourseForm {
   protected $importManager;
 
   /**
-   * OCCAPI provider manager service.
-   *
-   * @var \Drupal\occapi_client\OccapiProviderManager
-   */
-  protected $providerManager;
-
-  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
     // Instantiates this form class.
     $instance = parent::create($container);
-    $instance->importManager   = $container->get('occapi_entities_bridge.manager');
-    $instance->providerManager = $container->get('occapi_client.manager');
+    $instance->importManager = $container->get('occapi_entities_bridge.manager');
     return $instance;
   }
 
@@ -53,7 +45,18 @@ class CourseApiForm extends CourseForm {
   public function form(array $form, FormStateInterface $form_state) {
     $form = [];
 
-    // dpm($this);
+    $remote_id  = $this->entity->get(Manager::REMOTE_ID)->value;
+    $remote_url = $this->entity->get(Manager::REMOTE_URL)->value;
+
+    if (! empty($remote_id)) {
+      $header_markup = $this->importManager
+        ->formatRemoteId($remote_id, $remote_url);
+
+      $form['header'] = [
+        '#type' => 'markup',
+        '#markup' => $header_markup
+      ];
+    }
 
     // Get the entity ID of the referenced Institution.
     $ref_field = $this->entity->get(Manager::REF_HEI)->getValue();
@@ -86,8 +89,6 @@ class CourseApiForm extends CourseForm {
     // Build the TempStore key for this Course.
     $tempstore = '';
 
-    $remote_id  = $this->entity->get(Manager::REMOTE_ID)->value;
-
     if (! empty($remote_id)) {
       $tempstore = \implode('.', [
         $provider_id,
@@ -98,42 +99,48 @@ class CourseApiForm extends CourseForm {
     }
 
     // Load additional Course data from an external API.
-    $remote_url = $this->entity->get(Manager::REMOTE_URL)->value;
-
-    $course_external = NULL;
+    $course_ext = NULL;
 
     if (! empty($tempstore) && ! empty($remote_url)) {
-      $course_external = $this->importManager
+      $course_ext = $this->importManager
         ->loadExternalCourse($tempstore, $remote_url);
     }
 
+    // Prepare the data from the extra fields.
     $display_data = [];
 
-    // Prepare the data from the extra fields.
-    if (! empty($course_external)) {
-      $course_external_fields = OccapiFieldManager::getCourseExtraFields();
+    if (! empty($course_ext)) {
+      $course_ext_fields = OccapiFieldManager::getCourseExtraFields();
 
-      $course_external_data = $course_external[JsonDataProcessor::DATA_KEY];
-      $course_external_attributes = $course_external_data[JsonDataProcessor::ATTR_KEY];
+      $course_ext_data = $course_ext[JsonDataProcessor::DATA_KEY];
+      $course_ext_attributes = $course_ext_data[JsonDataProcessor::ATTR_KEY];
 
-      foreach ($course_external_fields as $key => $value) {
-        $display_data[$key] = $course_external_attributes[$key];
+      foreach ($course_ext_fields as $key => $value) {
+        $display_data[$key] = $course_ext_attributes[$key];
       }
     }
 
     // Render extra field data.
     if (! empty($display_data)) {
-      foreach ($display_data as $key => $value) {
+      foreach ($display_data as $key => $array) {
         $form[$key] = [
-          '#type' => 'details',
-          '#title' => $key,
+          '#type' => 'container'
         ];
 
-        $form[$key][$key . '_data'] = [
-          '#type' => 'markup',
-          '#markup' => $value[0][JsonDataProcessor::MLSTR_KEY],
-        ];
+        foreach ($array as $i => $value) {
+          $lang = $value[JsonDataProcessor::LANG_KEY];
+          $title = ($lang) ? $key . ' <code>' . $lang . '</code>' : $key;
 
+          $form[$key][$i] = [
+            '#type' => 'details',
+            '#title' => $title,
+          ];
+
+          $form[$key][$i][$key . '_' . $i . '_data'] = [
+            '#type' => 'markup',
+            '#markup' => $value[JsonDataProcessor::MLSTR_KEY],
+          ];
+        }
       }
     }
 

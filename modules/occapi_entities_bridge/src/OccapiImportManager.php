@@ -4,10 +4,12 @@ namespace Drupal\occapi_entities_bridge;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Link;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
+use Drupal\Core\Url;
 use Drupal\ewp_institutions_get\InstitutionManager;
 use Drupal\occapi_client\DataFormatter;
 use Drupal\occapi_client\Entity\OccapiProvider;
@@ -807,6 +809,41 @@ class OccapiImportManager {
   }
 
   /**
+   * Format remote API fields for display.
+   *
+   * @param string $remote_id
+   *   Remote ID of an OCCAPI resource.
+   * @param string $remote_url
+   *   Remote URL of an OCCAPI resource.
+   *
+   * @return array $markup
+   */
+  public function formatRemoteId(string $remote_id, string $remote_url): string {
+    $markup = '';
+
+    if (! empty($remote_id)) {
+      $markup .= '<p><strong>Remote ID:</strong> ';
+
+      if (empty($remote_url)) {
+        $markup .= '<code>' . $remote_id . '</code>';
+      }
+      else {
+        $url = Url::fromUri($remote_url, [
+          'attributes' => ['target' => '_blank']
+        ]);
+
+        $link = Link::fromTextAndUrl($remote_id, $url)->toString();
+
+        $markup .= '<code>' . $link . '</code>';
+      }
+
+      $markup .= '</p><hr />';
+    }
+
+    return $markup;
+  }
+
+  /**
    * Load single Course resource directly from an external API.
    *
    * @param string $tempstore
@@ -821,7 +858,7 @@ class OccapiImportManager {
     if (empty($endpoint) || empty($endpoint)) {
       return [];
     }
-    
+
     $response = $this->jsonDataFetcher
       ->load($tempstore, $endpoint);
 
