@@ -28,16 +28,19 @@ class OccapiImportManager {
   const COURSE_ENTITY    = 'course';
 
   // Machine name of the entity label.
-  const LABEL_KEY = 'label';
+  const LABEL_KEY        = 'label';
 
   // Machine names of entity reference fields.
-  const REF_HEI       = 'hei';
-  const REF_PROGRAMME = 'related_programme';
+  const REF_HEI          = 'hei';
+  const REF_PROGRAMME    = 'related_programme';
 
   // Machine names of OCCAPI extra fields.
-  const REMOTE_ID  = 'remote_id';
-  const REMOTE_URL = 'remote_url';
-  const JSON_META  = 'meta';
+  const REMOTE_ID        = 'remote_id';
+  const REMOTE_URL       = 'remote_url';
+  const JSON_META        = 'meta';
+
+  // TempStore key suffix for external resources.
+  const EXT_SUFFIX       = 'external';
 
   /**
    * Config factory.
@@ -375,6 +378,22 @@ class OccapiImportManager {
     ];
 
     return render($build);
+  }
+
+  /**
+   * Get a list of eenabled OCCAPI providers by Institution ID.
+   *
+   * @param string $hei_id
+   *   Institution ID to look up.
+   *
+   * @return \Drupal\occapi_client\Entity\OccapiProvider[]
+   */
+  public function getHeiProviders(string $hei_id): array {
+    $providers = $this->entityTypeManager
+      ->getStorage(OccapiProviderManager::ENTITY_TYPE)
+      ->loadByProperties(['hei_id' => $hei_id, 'status' => TRUE]);
+
+    return $providers;
   }
 
   /**
@@ -785,6 +804,30 @@ class OccapiImportManager {
       ->loadByProperties([self::REMOTE_ID => $resource_id]);
 
     return $created;
+  }
+
+  /**
+   * Load single Course resource directly from an external API.
+   *
+   * @param string $tempstore
+   *   TempStore key for the Course resource.
+   * @param string $endpoint
+   *   The endpoint from which to fetch data.
+   *
+   * @return array $resource
+   *   An array containing the JSON:API resource data.
+   */
+  public function loadExternalCourse(string $tempstore, string $endpoint): array {
+    if (empty($endpoint) || empty($endpoint)) {
+      return [];
+    }
+    
+    $response = $this->jsonDataFetcher
+      ->load($tempstore, $endpoint);
+
+    $resource = \json_decode($response, TRUE);
+
+    return $resource;
   }
 
 }

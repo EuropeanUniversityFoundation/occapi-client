@@ -73,6 +73,24 @@ function occapi_entities_bridge_entity_base_field_info(EntityTypeInterface $enti
 }
 
 /**
+ * Implements hook_entity_type_build().
+ *
+ * Add new forms and links to the Programmes and Courses.
+ */
+function occapi_entities_bridge_entity_type_build(array &$entity_types) {
+
+  /** @var $entity_types \Drupal\Core\Entity\EntityTypeInterface[] */
+  $entity_types[Manager::PROGRAMME_ENTITY]
+    ->setFormClass('api', 'Drupal\\occapi_entities_bridge\\Form\\ProgrammeApiForm')
+    ->setLinkTemplate('api-form', '/occapi/programme/{programme}/api');
+
+  /** @var $entity_types \Drupal\Core\Entity\EntityTypeInterface[] */
+  $entity_types[Manager::COURSE_ENTITY]
+    ->setFormClass('api', 'Drupal\\occapi_entities_bridge\\Form\\CourseApiForm')
+    ->setLinkTemplate('api-form', '/occapi/course/{course}/api');
+}
+
+/**
  * Implements hook_form_FORM_ID_alter().
  */
 function occapi_entities_bridge_form_course_add_form_alter(&$form, FormStateInterface $form_state) {

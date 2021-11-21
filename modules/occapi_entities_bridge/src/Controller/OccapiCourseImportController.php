@@ -3,6 +3,7 @@
 namespace Drupal\occapi_entities_bridge\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\occapi_entities_bridge\OccapiImportManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -11,6 +12,13 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
  * Returns responses for OCCAPI entities bridge routes.
  */
 class OccapiCourseImportController extends ControllerBase {
+
+  /**
+   * The entity type manager.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  protected $entityTypeManager;
 
   /**
    * OCCAPI entity import manager service.
@@ -22,22 +30,43 @@ class OccapiCourseImportController extends ControllerBase {
   /**
    * Constructs an OccapiCourseImportController object.
    *
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   *   The entity type manager.
    * @param \Drupal\occapi_entities_bridge\OccapiImportManager $import_manager
    *   The OCCAPI entity import manager service.
    */
   public function __construct(
-    OccapiImportManager $import_manager
+   EntityTypeManagerInterface $entity_type_manager,
+   OccapiImportManager $import_manager
   ) {
-    $this->importManager = $import_manager;
+   $this->entityTypeManager  = $entity_type_manager;
+   $this->importManager = $import_manager;
   }
 
   /**
-   * {@inheritdoc}
-   */
+  * {@inheritdoc}
+  */
   public static function create(ContainerInterface $container) {
-    return new static(
-      $container->get('occapi_entities_bridge.manager'),
-    );
+   return new static(
+     $container->get('entity_type.manager'),
+     $container->get('occapi_entities_bridge.manager')
+   );
+  }
+
+  /**
+   * Provides an API form title callback.
+   *
+   * @param string $entity_type_id
+   *   The entity type ID.
+   *
+   * @return string
+   *   The title for the entity API form.
+   */
+  public function apiFormTitle($entity_type_id) {
+    $entity_type = $this->entityTypeManager->getDefinition($entity_type_id);
+    return $this->t('API data for @entity-type', [
+      '@entity-type' => $entity_type->getSingularLabel()
+    ]);
   }
 
   /**
