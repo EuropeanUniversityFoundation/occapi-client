@@ -12,7 +12,7 @@ occapi_entities_bridge.select:
     _form: 'Drupal\occapi_entities_bridge\Form\OccapiSelectForm'
     _title: 'Select OCCAPI entities to import'
   requirements:
-    _permission: 'administer course.administer programme'
+    _permission: 'administer course,administer programme'
 
 occapi_entities_bridge.import:
   path: '/admin/structure/occapi/import/{tempstore}'
@@ -20,7 +20,7 @@ occapi_entities_bridge.import:
     _form: 'Drupal\occapi_entities_bridge\Form\OccapiImportForm'
     _title: 'Import OCCAPI entities'
   requirements:
-    _permission: 'administer course.administer programme'
+    _permission: 'administer course,administer programme'
   options:
     parameters:
       tempstore:
@@ -32,7 +32,7 @@ occapi_entities_bridge.import_confirm:
     _form: 'Drupal\occapi_entities_bridge\Form\OccapiImportConfirmForm'
     _title: 'Confirm OCCAPI entities import'
   requirements:
-    _permission: 'administer course.administer programme'
+    _permission: 'administer course,administer programme'
 
 occapi_entities_bridge.import_programme:
   path: '/admin/structure/occapi/programme/import/{tempstore}'
@@ -52,7 +52,7 @@ occapi_entities_bridge.import_programme_courses:
     _title: 'Import programme with courses'
     _controller: '\Drupal\occapi_entities_bridge\Controller\OccapiProgrammeImportController::importCourses'
   requirements:
-    _permission: 'create programme.create course'
+    _permission: 'create programme,create course'
   options:
     parameters:
       tempstore:
@@ -84,6 +84,19 @@ entity.programme.api_form:
       programme:
         type: entity:programme
 
+# Programme related Courses
+entity.programme.course:
+  path: '/occapi/programme/{programme}/course'
+  defaults:
+    _controller: 'Drupal\occapi_entities_bridge\Controller\OccapiProgrammeImportController::build'
+    _title_callback: 'Drupal\occapi_entities_bridge\Controller\OccapiProgrammeImportController::coursesTitle'
+  requirements:
+    _permission: 'view programme,view course'
+  options:
+    parameters:
+      programme:
+        type: entity:programme
+
 # Course API form
 entity.course.api_form:
   path: '/occapi/course/{course}/api'
@@ -93,6 +106,19 @@ entity.course.api_form:
     _title_callback: 'Drupal\occapi_entities_bridge\Controller\OccapiCourseImportController::apiFormTitle'
   requirements:
     _entity_access: course.view
+  options:
+    parameters:
+      course:
+        type: entity:course
+
+# Course related Programmes
+entity.course.programme:
+  path: '/occapi/course/{course}/programme'
+  defaults:
+    _controller: 'Drupal\occapi_entities_bridge\Controller\OccapiCourseImportController::build'
+    _title_callback: 'Drupal\occapi_entities_bridge\Controller\OccapiCourseImportController::programmesTitle'
+  requirements:
+    _permission: 'view programme,view course'
   options:
     parameters:
       course:

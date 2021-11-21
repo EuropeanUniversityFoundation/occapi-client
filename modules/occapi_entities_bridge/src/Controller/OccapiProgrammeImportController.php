@@ -70,6 +70,16 @@ class OccapiProgrammeImportController extends ControllerBase {
   }
 
   /**
+   * Provides a title callback for related Courses.
+   *
+   * @return string
+   *   The title for the entity controller.
+   */
+  public function coursesTitle() {
+    return $this->t('Related courses');
+  }
+
+  /**
    * Builds the response.
    */
   public function build() {
