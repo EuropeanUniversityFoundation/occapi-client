@@ -26,20 +26,20 @@ class OccapiImportManager {
   use StringTranslationTrait;
 
   // Machine names of OCCAPI entity types.
-  const PROGRAMME_ENTITY = 'programme';
-  const COURSE_ENTITY    = 'course';
+  const PROGRAMME_ENTITY  = 'programme';
+  const COURSE_ENTITY     = 'course';
 
   // Machine name of the entity label.
-  const LABEL_KEY        = 'label';
+  const LABEL_KEY         = 'label';
 
   // Machine names of entity reference fields.
-  const REF_HEI          = 'hei';
-  const REF_PROGRAMME    = 'related_programme';
+  const REF_HEI           = 'hei';
+  const REF_PROGRAMME     = 'related_programme';
 
   // Machine names of OCCAPI extra fields.
-  const REMOTE_ID        = 'remote_id';
-  const REMOTE_URL       = 'remote_url';
-  const JSON_META        = 'meta';
+  const REMOTE_ID         = 'remote_id';
+  const REMOTE_URL        = 'remote_url';
+  const JSON_META         = 'meta';
 
   // TempStore key suffix for external resources.
   const EXT_SUFFIX       = 'external';
