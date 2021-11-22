@@ -88,8 +88,8 @@ entity.programme.api_form:
 entity.programme.course:
   path: '/occapi/programme/{programme}/course'
   defaults:
-    _controller: 'Drupal\occapi_entities_bridge\Controller\OccapiProgrammeImportController::build'
-    _title_callback: 'Drupal\occapi_entities_bridge\Controller\OccapiProgrammeImportController::coursesTitle'
+    _controller: 'Drupal\occapi_entities_bridge\Controller\OccapiProgrammeImportController::relatedCourses'
+    _title_callback: 'Drupal\occapi_entities_bridge\Controller\OccapiProgrammeImportController::relatedCoursesTitle'
   requirements:
     _permission: 'view programme,view course'
   options:
@@ -115,8 +115,8 @@ entity.course.api_form:
 entity.course.programme:
   path: '/occapi/course/{course}/programme'
   defaults:
-    _controller: 'Drupal\occapi_entities_bridge\Controller\OccapiCourseImportController::build'
-    _title_callback: 'Drupal\occapi_entities_bridge\Controller\OccapiCourseImportController::programmesTitle'
+    _controller: 'Drupal\occapi_entities_bridge\Controller\OccapiCourseImportController::relatedProgrammes'
+    _title_callback: 'Drupal\occapi_entities_bridge\Controller\OccapiCourseImportController::relatedProgrammesTitle'
   requirements:
     _permission: 'view programme,view course'
   options:

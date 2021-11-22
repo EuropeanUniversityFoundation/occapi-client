@@ -20,6 +20,7 @@ class OccapiMetaManager {
   use StringTranslationTrait;
 
   // OCCAPI metadata keys.
+  const SCOPE             = 'scope';
   const SCOPE_GLOBAL      = 'global';
   const META_GLOBAL_EQF   = 'eqfLevel';
 
@@ -28,6 +29,9 @@ class OccapiMetaManager {
   const META_PROGRAMME_MC = 'mandatoryCourse';
 
   const META_YEAR         = 'year';
+
+  // OCCAPI Programme fields.
+  const PROGRAMME_EQF     = 'eqf_level_provided';
 
   /**
    * The OCCAPI Course entity.
@@ -124,4 +128,128 @@ class OccapiMetaManager {
     return $programmes;
   }
 
+  /**
+   * Get the metadata for all Programmes related to a Course.
+   *
+   * @param Course $course
+   *   An OCCAPI Programme entity.
+   * @param Programme[] $programmes
+   *   An array of OCCAPI Programme entities.
+   *
+   * @return $metadata
+   *   An array of metadata keyed by programme ID.
+   */
+  public function getMetaByCourse(Course $course, array $programmes): array {
+    $this->course = $course;
+
+    $json = $this->course->get(OccapiImportManager::JSON_META)->value;
+    $data = \json_decode($json, TRUE);
+
+    $metadata = [];
+
+    foreach ($programmes as $id => $programme) {
+      $metadata[$id] = [];
+
+      if (\array_key_exists(self::SCOPE_PROGRAMME, $data)) {
+        $remote_id = $programme->get(OccapiImportManager::REMOTE_ID)->value;
+
+        foreach ($data[self::SCOPE_PROGRAMME] as $i => $array) {
+          if ($array[self::META_PROGRAMME_ID] === $remote_id) {
+            $metadata[$id] = [
+              self::SCOPE => self::SCOPE_PROGRAMME,
+              self::META_YEAR => $array[self::META_YEAR],
+              self::META_PROGRAMME_MC => $array[self::META_PROGRAMME_MC]
+            ];
+          }
+        }
+      }
+      elseif (\array_key_exists(self::SCOPE_GLOBAL, $data)) {
+        $eqf_level = $programme->get(self::PROGRAMME_EQF)->value;
+
+        if ($data[self::SCOPE_GLOBAL][self::META_GLOBAL_EQF] === $eqf_level) {
+          $metadata[$id] = [
+            self::SCOPE => self::SCOPE_GLOBAL,
+            self::META_YEAR => $data[self::META_YEAR],
+            self::META_PROGRAMME_MC => FALSE
+          ];
+        }
+      }
+    }
+
+    return $metadata;
+  }
+
+  /**
+   * Get the metadata for all Courses related to a Programme.
+   *
+   * @param Programme $programme
+   *   An OCCAPI Programme entity.
+   * @param Course[] $courses
+   *   An array of OCCAPI Course entities.
+   *
+   * @return $metadata
+   *   An array of metadata keyed by course ID.
+   */
+  public function getMetaByProgramme(Programme $programme, array $courses): array {
+    $this->programme = $programme;
+
+    $programmes = [$this->programme->id() => $this->programme];
+
+    $metadata = [];
+
+    foreach ($courses as $id => $course) {
+      $course_metadata = $this->getMetaByCourse($course, $programmes);
+
+      $metadata[$id] = $course_metadata[$this->programme->id()];
+    }
+
+    return $metadata;
+  }
+
+  /**
+   * Format metadata by entity type as HTML table.
+   *
+   * @param array $metadata
+   *   An array containing a JSON:API resource collection.
+   * @param string $entity_type_id
+   *   The entity type ID to format the primary column.
+   *
+   * @return string
+   *   Rendered table markup.
+   */
+  public function metaTable(array $metadata, string $entity_type_id): string {
+    $header = [
+      $entity_type_id,
+      self::META_YEAR,
+      self::META_PROGRAMME_MC,
+      self::SCOPE
+    ];
+
+    $rows = [];
+
+    foreach ($metadata as $key => $value) {
+      $entity = $this->entityTypeManager
+        ->getStorage($entity_type_id)
+        ->loadByProperties(['id' => $key]);
+
+      $mandatory = (\array_key_exists(self::META_PROGRAMME_MC, $value)) ?
+        $value[self::META_PROGRAMME_MC] :
+        FALSE;
+
+      $rows[] = [
+        $entity[$key]->toLink(),
+        $value[self::META_YEAR],
+        ($mandatory) ? $this->t('Yes') : '',
+        $value[self::SCOPE]
+      ];
+    }
+
+    $build['table'] = [
+      '#type' => 'table',
+      '#header' => $header,
+      '#rows' => $rows,
+    ];
+
+    return render($build);
+  }
 }
