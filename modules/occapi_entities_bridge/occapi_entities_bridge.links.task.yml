@@ -13,6 +13,11 @@ entity.course.api:
   base_route: entity.course.canonical
   title: API
 
+entity.course.external:
+  route_name: entity.course.external
+  base_route: entity.course.canonical
+  title: External
+
 entity.course.programme:
   route_name: entity.course.programme
   base_route: entity.course.canonical
