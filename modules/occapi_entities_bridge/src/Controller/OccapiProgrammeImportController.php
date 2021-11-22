@@ -6,7 +6,6 @@ use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\occapi_entities\Entity\Programme;
 use Drupal\occapi_entities_bridge\OccapiImportManager;
-use Drupal\occapi_entities_bridge\OccapiMetaManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 
@@ -37,30 +36,19 @@ class OccapiProgrammeImportController extends ControllerBase {
   protected $importManager;
 
   /**
-   * OCCAPI metadata manager service.
-   *
-   * @var \Drupal\occapi_entities_bridge\OccapiMetaManager
-   */
-  protected $metaManager;
-
-  /**
    * Constructs an OccapiProgrammeImportController object.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    *   The entity type manager.
    * @param \Drupal\occapi_entities_bridge\OccapiImportManager $import_manager
    *   The OCCAPI entity import manager service.
-   * @param \Drupal\occapi_entities_bridge\OccapiMetaManager $meta_manager
-   *   The OCCAPI entity import manager service.
    */
   public function __construct(
     EntityTypeManagerInterface $entity_type_manager,
-    OccapiImportManager $import_manager,
-    OccapiMetaManager $meta_manager
+    OccapiImportManager $import_manager
   ) {
-    $this->entityTypeManager  = $entity_type_manager;
-    $this->importManager = $import_manager;
-    $this->metaManager = $meta_manager;
+    $this->entityTypeManager = $entity_type_manager;
+    $this->importManager     = $import_manager;
   }
 
   /**
@@ -69,8 +57,7 @@ class OccapiProgrammeImportController extends ControllerBase {
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('entity_type.manager'),
-      $container->get('occapi_entities_bridge.manager'),
-      $container->get('occapi_entities_bridge.meta')
+      $container->get('occapi_entities_bridge.manager')
     );
   }
 
@@ -88,39 +75,6 @@ class OccapiProgrammeImportController extends ControllerBase {
     return $this->t('API data for @entity-type', [
       '@entity-type' => $entity_type->getSingularLabel()
     ]);
-  }
-
-  /**
-   * Provides a title callback for related Courses.
-   *
-   * @return string
-   *   The title for the entity controller.
-   */
-  public function relatedCoursesTitle() {
-    return $this->t('Related courses');
-  }
-
-  /**
-   * Builds the response for related Courses.
-   */
-  public function relatedCourses(Programme $programme) {
-    $this->entity = $programme;
-
-    $courses = $this->metaManager
-      ->relatedCourses($this->entity);
-
-    $metadata = $this->metaManager
-      ->getMetaByProgramme($this->entity, $courses);
-
-    $markup = $this->metaManager
-      ->metaTable($metadata, OccapiImportManager::COURSE_ENTITY);
-
-    $build['content'] = [
-      '#type' => 'item',
-      '#markup' => $markup,
-    ];
-
-    return $build;
   }
 
   /**
