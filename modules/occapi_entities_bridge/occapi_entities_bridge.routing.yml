@@ -78,7 +78,7 @@ entity.programme.api_form:
     entity_type_id: programme
     _title_callback: 'Drupal\occapi_entities_bridge\Controller\OccapiProgrammeImportController::apiFormTitle'
   requirements:
-    _entity_access: programme.view
+    _entity_access: programme.edit
   options:
     parameters:
       programme:
@@ -105,7 +105,7 @@ entity.course.api_form:
     entity_type_id: course
     _title_callback: 'Drupal\occapi_entities_bridge\Controller\OccapiCourseImportController::apiFormTitle'
   requirements:
-    _entity_access: course.view
+    _entity_access: course.edit
   options:
     parameters:
       course:

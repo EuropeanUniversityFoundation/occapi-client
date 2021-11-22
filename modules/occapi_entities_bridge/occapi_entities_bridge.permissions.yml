@@ -1,3 +1,7 @@
 bypass import occapi entities:
   title: 'Bypass Import OCCAPI entities form'
   restrict access: true
+
+administer occapi fields:
+  title: 'Administer OCCAPI fields and metadata'
+  restrict access: true

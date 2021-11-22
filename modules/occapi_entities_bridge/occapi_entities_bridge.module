@@ -9,6 +9,7 @@ use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\user\Entity\User;
 use Drupal\occapi_entities_bridge\OccapiImportManager as Manager;
 
 /**
@@ -96,8 +97,6 @@ function occapi_entities_bridge_entity_type_build(array &$entity_types) {
 function occapi_entities_bridge_form_course_add_form_alter(&$form, FormStateInterface $form_state) {
   _occapi_entities_bridge_api_fields($form, $form_state);
   _occapi_entities_bridge_api_metadata($form, $form_state);
-
-    dpm($form);
 }
 
 /**
@@ -136,8 +135,10 @@ function _occapi_entities_bridge_api_fields(&$form, FormStateInterface $form_sta
     '#weight' => 100
   ];
 
-  $remote_id['widget'][0]['value']['#attributes']['readonly']  = 'readonly';
-  $remote_url['widget'][0]['value']['#attributes']['readonly'] = 'readonly';
+  if (! \Drupal::currentUser()->hasPermission('administer occapi fields')) {
+    $remote_id['widget'][0]['value']['#attributes']['readonly']  = 'readonly';
+    $remote_url['widget'][0]['value']['#attributes']['readonly'] = 'readonly';
+  }
 
   $form['api_fields'][Manager::REMOTE_ID]  = $remote_id;
   $form['api_fields'][Manager::REMOTE_URL] = $remote_url;
@@ -152,7 +153,9 @@ function _occapi_entities_bridge_api_fields(&$form, FormStateInterface $form_sta
 function _occapi_entities_bridge_api_metadata(&$form, FormStateInterface $form_state) {
   $metadata = $form[Manager::JSON_META];
 
-  $metadata['widget'][0]['value']['#attributes']['readonly']  = 'readonly';
+  if (! \Drupal::currentUser()->hasPermission('administer occapi fields')) {
+    $metadata['widget'][0]['value']['#attributes']['readonly']  = 'readonly';
+  }
 
   $form['api_fields'][Manager::JSON_META] = $metadata;
 
