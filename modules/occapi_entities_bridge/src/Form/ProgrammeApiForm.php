@@ -45,15 +45,22 @@ class ProgrammeApiForm extends ProgrammeForm {
     $remote_id  = $this->entity->get(Manager::REMOTE_ID)->value;
     $remote_url = $this->entity->get(Manager::REMOTE_URL)->value;
 
-    if (! empty($remote_id)) {
-      $header_markup = $this->importManager
-        ->formatRemoteId($remote_id, $remote_url);
-
+    if (empty($remote_id)) {
       $form['header'] = [
         '#type' => 'markup',
-        '#markup' => $header_markup
+        '#markup' => '<em>' . $this->t('No API data available.') . '</em>'
       ];
+
+      return $form;
     }
+
+    $header_markup = $this->importManager
+      ->formatRemoteId($remote_id, $remote_url);
+
+    $form['header'] = [
+      '#type' => 'markup',
+      '#markup' => $header_markup
+    ];
 
     return $form;
   }
