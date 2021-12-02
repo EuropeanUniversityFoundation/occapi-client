@@ -13,10 +13,10 @@ entity.course.api:
   base_route: entity.course.canonical
   title: API
 
-entity.course.external:
-  route_name: entity.course.external
+entity.course.extended:
+  route_name: entity.course.extended
   base_route: entity.course.canonical
-  title: External
+  title: Extended data
 
 entity.course.programme:
   route_name: entity.course.programme

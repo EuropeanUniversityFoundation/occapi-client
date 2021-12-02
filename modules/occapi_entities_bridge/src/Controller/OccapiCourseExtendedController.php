@@ -15,7 +15,7 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 /**
  * Returns responses for OCCAPI entities bridge routes.
  */
-class OccapiCourseExternalController extends ControllerBase {
+class OccapiCourseExtendedController extends ControllerBase {
 
   /**
    * The OCCAPI Course entity.
@@ -65,19 +65,19 @@ class OccapiCourseExternalController extends ControllerBase {
   }
 
   /**
-   * Provides a title callback for external data.
+   * Provides a title callback for extended data.
    *
    * @return string
    *   The title for the entity controller.
    */
-  public function externalDataTitle() {
-    return $this->t('External data');
+  public function extendedDataTitle() {
+    return $this->t('Extended data');
   }
 
   /**
-   * Builds the response for external data.
+   * Builds the response for extended data.
    */
-  public function externalData(Course $course) {
+  public function extendedData(Course $course) {
     $this->entity = $course;
 
     $remote_id  = $this->entity->get(OccapiImportManager::REMOTE_ID)->value;
@@ -178,7 +178,9 @@ class OccapiCourseExternalController extends ControllerBase {
         }
       }
     }
-
+    else {
+      $markup .= '<em>' . $this->t('No external data to display.') . '</em>';
+    }
 
     $build['content'] = [
       '#type' => 'item',

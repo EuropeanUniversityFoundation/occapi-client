@@ -111,12 +111,12 @@ entity.course.api_form:
       course:
         type: entity:course
 
-# Course data from external API
-entity.course.external:
-  path: '/occapi/course/{course}/external'
+# Extended Course data from external API
+entity.course.extended:
+  path: '/occapi/course/{course}/extended'
   defaults:
-    _controller: 'Drupal\occapi_entities_bridge\Controller\OccapiCourseExternalController::externalData'
-    _title_callback: 'Drupal\occapi_entities_bridge\Controller\OccapiCourseExternalController::externalDataTitle'
+    _controller: 'Drupal\occapi_entities_bridge\Controller\OccapiCourseExtendedController::extendedData'
+    _title_callback: 'Drupal\occapi_entities_bridge\Controller\OccapiCourseExtendedController::extendedDataTitle'
   requirements:
     _entity_access: course.view
   options:
