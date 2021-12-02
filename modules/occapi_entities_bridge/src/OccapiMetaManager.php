@@ -21,6 +21,7 @@ class OccapiMetaManager {
 
   // OCCAPI metadata keys.
   const SCOPE             = 'scope';
+
   const SCOPE_GLOBAL      = 'global';
   const META_GLOBAL_EQF   = 'eqfLevel';
 
@@ -150,28 +151,30 @@ class OccapiMetaManager {
     foreach ($programmes as $id => $programme) {
       $metadata[$id] = [];
 
-      if (\array_key_exists(self::SCOPE_PROGRAMME, $data)) {
-        $remote_id = $programme->get(OccapiImportManager::REMOTE_ID)->value;
+      if (! empty($data)) {
+        if (\array_key_exists(self::SCOPE_PROGRAMME, $data)) {
+          $remote_id = $programme->get(OccapiImportManager::REMOTE_ID)->value;
 
-        foreach ($data[self::SCOPE_PROGRAMME] as $i => $array) {
-          if ($array[self::META_PROGRAMME_ID] === $remote_id) {
-            $metadata[$id] = [
-              self::SCOPE => self::SCOPE_PROGRAMME,
-              self::META_YEAR => $array[self::META_YEAR],
-              self::META_PROGRAMME_MC => $array[self::META_PROGRAMME_MC]
-            ];
+          foreach ($data[self::SCOPE_PROGRAMME] as $i => $array) {
+            if ($array[self::META_PROGRAMME_ID] === $remote_id) {
+              $metadata[$id] = [
+                self::SCOPE => self::SCOPE_PROGRAMME,
+                self::META_YEAR => $array[self::META_YEAR],
+                self::META_PROGRAMME_MC => $array[self::META_PROGRAMME_MC]
+              ];
+            }
           }
         }
-      }
-      elseif (\array_key_exists(self::SCOPE_GLOBAL, $data)) {
-        $eqf_level = $programme->get(self::PROGRAMME_EQF)->value;
+        elseif (\array_key_exists(self::SCOPE_GLOBAL, $data)) {
+          $eqf_level = $programme->get(self::PROGRAMME_EQF)->value;
 
-        if ($data[self::SCOPE_GLOBAL][self::META_GLOBAL_EQF] === $eqf_level) {
-          $metadata[$id] = [
-            self::SCOPE => self::SCOPE_GLOBAL,
-            self::META_YEAR => $data[self::META_YEAR],
-            self::META_PROGRAMME_MC => FALSE
-          ];
+          if ($data[self::SCOPE_GLOBAL][self::META_GLOBAL_EQF] === $eqf_level) {
+            $metadata[$id] = [
+              self::SCOPE => self::SCOPE_GLOBAL,
+              self::META_YEAR => $data[self::META_YEAR],
+              self::META_PROGRAMME_MC => FALSE
+            ];
+          }
         }
       }
     }
@@ -233,14 +236,15 @@ class OccapiMetaManager {
         ->loadByProperties(['id' => $key]);
 
       $mandatory = (\array_key_exists(self::META_PROGRAMME_MC, $value)) ?
-        $value[self::META_PROGRAMME_MC] :
-        FALSE;
+        $value[self::META_PROGRAMME_MC] : FALSE;
 
       $rows[] = [
         $entity[$key]->toLink(),
-        $value[self::META_YEAR],
+        (\array_key_exists(self::META_YEAR, $value)) ?
+          $value[self::META_YEAR] : '',
         ($mandatory) ? $this->t('Yes') : '',
-        $value[self::SCOPE]
+        (\array_key_exists(self::SCOPE, $value)) ?
+          $value[self::SCOPE] : ''
       ];
     }
 
