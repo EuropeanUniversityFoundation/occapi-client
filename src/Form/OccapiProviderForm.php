@@ -4,6 +4,9 @@ namespace Drupal\occapi_client\Form;
 
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\occapi_client\JsonDataFetcher;
+use Drupal\occapi_client\OccapiProviderManager as Manager;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * OCCAPI provider form.
@@ -11,6 +14,23 @@ use Drupal\Core\Form\FormStateInterface;
  * @property \Drupal\occapi_client\OccapiProviderInterface $entity
  */
 class OccapiProviderForm extends EntityForm {
+
+  /**
+   * JSON data fetcher service.
+   *
+   * @var \Drupal\occapi_client\JsonDataFetcher
+   */
+  protected $jsonDataFetcher;
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container) {
+    // Instantiates this form class.
+    $instance = parent::create($container);
+    $instance->jsonDataFetcher = $container->get('occapi_client.fetch');
+    return $instance;
+  }
 
   /**
    * {@inheritdoc}
@@ -97,4 +117,23 @@ class OccapiProviderForm extends EntityForm {
     return $result;
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function validateForm(array &$form, FormStateInterface $form_state) {
+    $values   = $form_state->getValues();
+    $hei_id   = $values['hei_id'];
+    $base_url = $values['base_url'];
+    $endpoint = $base_url . '/' . Manager::HEI_KEY . '/' . $hei_id;
+
+    $code = $this->jsonDataFetcher
+      ->getResponseCode($endpoint);
+
+    if ($code !== 200) {
+      $message = $this->t('Failed to fetch Institution data from %endpoint.', [
+        '%endpoint' => $endpoint
+      ]);
+      $form_state->setErrorByName('base_url', $message);
+    }
+  }
 }

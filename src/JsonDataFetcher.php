@@ -140,6 +140,29 @@ class JsonDataFetcher {
   }
 
   /**
+   * Get response code from an external API endpoint.
+   *
+   * @param string $endpoint
+   *   The external API endpoint.
+   *
+   * @return int
+   *   The response code.
+   */
+  public function getResponseCode(string $endpoint): int {
+    // Build the HTTP request.
+    try {
+      $request = $this->httpClient->get($endpoint);
+      $code = $request->getCode();
+    } catch (GuzzleException $e) {
+      $code = $e->getCode();
+    } catch (Exception $e) {
+      watchdog_exception('occapi_client', $e->getMessage());
+    }
+
+    return $code;
+  }
+
+  /**
    * Check the tempstore for the updated date.
    *
    * @param string $temp_store_key
