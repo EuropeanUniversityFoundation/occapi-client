@@ -48,7 +48,7 @@ class OccapiProviderForm extends EntityForm {
       '#title' => $this->t('Base URL'),
       '#maxlength' => 255,
       '#default_value' => $this->entity->get('base_url'),
-      '#description' => $this->t('Format: <em>https://domain.tld/occapi</em>'),
+      '#description' => $this->t('Format: <em>https://domain.tld/occapi/v1</em>'),
       '#required' => TRUE,
     ];
 
