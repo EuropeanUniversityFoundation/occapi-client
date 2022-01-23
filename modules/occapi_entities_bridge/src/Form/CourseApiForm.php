@@ -3,6 +3,8 @@
 namespace Drupal\occapi_entities_bridge\Form;
 
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Messenger\MessengerInterface;
+use Drupal\occapi_client\JsonDataFetcher;
 use Drupal\occapi_client\JsonDataProcessor;
 use Drupal\occapi_client\OccapiFieldManager;
 use Drupal\occapi_client\OccapiProviderManager;
@@ -14,6 +16,34 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Form controller for the course entity API form.
  */
 class CourseApiForm extends CourseForm {
+
+  /**
+   * The remote URL for this Course.
+   *
+   * @var string
+   */
+  protected $endpoint;
+
+  /**
+   * The tempstore key for this Course.
+   *
+   * @var string
+   */
+  protected $tempstore;
+
+  /**
+  * JSON data fetching service.
+  *
+  * @var \Drupal\occapi_client\JsonDataFetcher
+  */
+  protected $jsonDataFetcher;
+
+  /**
+   * The messenger service.
+   *
+   * @var \Drupal\Core\Messenger\MessengerInterface
+   */
+  protected $messenger;
 
   /**
    * OCCAPI entity import manager service.
@@ -28,7 +58,9 @@ class CourseApiForm extends CourseForm {
   public static function create(ContainerInterface $container) {
     // Instantiates this form class.
     $instance = parent::create($container);
-    $instance->importManager = $container->get('occapi_entities_bridge.manager');
+    $instance->jsonDataFetcher = $container->get('occapi_client.fetch');
+    $instance->messenger       = $container->get('messenger');
+    $instance->importManager   = $container->get('occapi_entities_bridge.manager');
     return $instance;
   }
 
@@ -45,8 +77,8 @@ class CourseApiForm extends CourseForm {
   public function form(array $form, FormStateInterface $form_state) {
     $form = [];
 
-    $remote_id  = $this->entity->get(Manager::REMOTE_ID)->value;
-    $remote_url = $this->entity->get(Manager::REMOTE_URL)->value;
+    $remote_id      = $this->entity->get(Manager::REMOTE_ID)->value;
+    $this->endpoint = $this->entity->get(Manager::REMOTE_URL)->value;
 
     if (empty($remote_id)) {
       $form['header'] = [
@@ -58,7 +90,7 @@ class CourseApiForm extends CourseForm {
     }
 
     $header_markup = $this->importManager
-      ->formatRemoteId($remote_id, $remote_url);
+      ->formatRemoteId($remote_id, $this->endpoint);
 
     $form['header'] = [
       '#type' => 'markup',
@@ -94,10 +126,8 @@ class CourseApiForm extends CourseForm {
     }
 
     // Build the TempStore key for this Course.
-    $tempstore = '';
-
     if (! empty($remote_id)) {
-      $tempstore = \implode('.', [
+      $this->tempstore = \implode('.', [
         $provider_id,
         OccapiProviderManager::COURSE_KEY,
         $remote_id,
@@ -108,9 +138,9 @@ class CourseApiForm extends CourseForm {
     // Load additional Course data from an external API.
     $course_ext = NULL;
 
-    if (! empty($tempstore) && ! empty($remote_url)) {
+    if (! empty($this->tempstore) && ! empty($this->endpoint)) {
       $course_ext = $this->importManager
-        ->loadExternalCourse($tempstore, $remote_url);
+        ->loadExternalCourse($this->tempstore, $this->endpoint);
     }
 
     // Prepare the data from the extra fields.
@@ -160,7 +190,26 @@ class CourseApiForm extends CourseForm {
   protected function actionsElement(array $form, FormStateInterface $form_state) {
     $element = [];
 
+    $element['submit'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Refresh data'),
+      '#submit' => ['::submitForm'],
+    ];
+
     return $element;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function submitForm(array &$form, FormStateInterface $form_state) {
+    $this->jsonDataFetcher
+      ->load($this->tempstore, $this->endpoint, TRUE);
+
+    $this->messenger
+      ->addMessage($this->t('Refreshed data for this Course.'));
+
+    parent::submitForm($form, $form_state);
   }
 
 }

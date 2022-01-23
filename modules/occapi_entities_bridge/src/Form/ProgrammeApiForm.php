@@ -3,6 +3,9 @@
 namespace Drupal\occapi_entities_bridge\Form;
 
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Messenger\MessengerInterface;
+use Drupal\occapi_client\JsonDataFetcher;
+use Drupal\occapi_client\OccapiProviderManager;
 use Drupal\occapi_entities\Form\ProgrammeForm;
 use Drupal\occapi_entities_bridge\OccapiImportManager as Manager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -11,6 +14,34 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Form controller for the programme entity API form.
  */
 class ProgrammeApiForm extends ProgrammeForm {
+
+  /**
+   * The remote URL for this Course.
+   *
+   * @var string
+   */
+  protected $endpoint;
+
+  /**
+   * The tempstore key for this Course.
+   *
+   * @var string
+   */
+  protected $tempstore;
+
+  /**
+  * JSON data fetching service.
+  *
+  * @var \Drupal\occapi_client\JsonDataFetcher
+  */
+  protected $jsonDataFetcher;
+
+  /**
+   * The messenger service.
+   *
+   * @var \Drupal\Core\Messenger\MessengerInterface
+   */
+  protected $messenger;
 
   /**
    * OCCAPI entity import manager service.
@@ -25,7 +56,9 @@ class ProgrammeApiForm extends ProgrammeForm {
   public static function create(ContainerInterface $container) {
     // Instantiates this form class.
     $instance = parent::create($container);
-    $instance->importManager = $container->get('occapi_entities_bridge.manager');
+    $instance->jsonDataFetcher = $container->get('occapi_client.fetch');
+    $instance->messenger       = $container->get('messenger');
+    $instance->importManager   = $container->get('occapi_entities_bridge.manager');
     return $instance;
   }
 
@@ -42,8 +75,8 @@ class ProgrammeApiForm extends ProgrammeForm {
   public function form(array $form, FormStateInterface $form_state) {
     $form = [];
 
-    $remote_id  = $this->entity->get(Manager::REMOTE_ID)->value;
-    $remote_url = $this->entity->get(Manager::REMOTE_URL)->value;
+    $remote_id      = $this->entity->get(Manager::REMOTE_ID)->value;
+    $this->endpoint = $this->entity->get(Manager::REMOTE_URL)->value;
 
     if (empty($remote_id)) {
       $form['header'] = [
@@ -55,12 +88,49 @@ class ProgrammeApiForm extends ProgrammeForm {
     }
 
     $header_markup = $this->importManager
-      ->formatRemoteId($remote_id, $remote_url);
+      ->formatRemoteId($remote_id, $this->endpoint);
 
     $form['header'] = [
       '#type' => 'markup',
       '#markup' => $header_markup
     ];
+
+    // Get the entity ID of the referenced Institution.
+    $ref_field = $this->entity->get(Manager::REF_HEI)->getValue();
+    $target_id = $ref_field[0]['target_id'];
+
+    // Get the Institution ID.
+    $hei_id = $this->entityTypeManager
+      ->getStorage(Manager::REF_HEI)
+      ->load($target_id)
+      ->get('hei_id')
+      ->value;
+
+    // Get the OCCAPI provider that covers the Institution ID.
+    $providers = $this->importManager
+      ->getHeiProviders($hei_id);
+
+    $provider_id = '';
+
+    // Account for more than one provider for a given Institution ID.
+    if (! empty($providers)) {
+      $found = FALSE;
+      foreach ($providers as $key => $obj) {
+        if (! $found) {
+          $provider_id = $key;
+          $found = TRUE;
+        }
+      }
+    }
+
+    // Build the TempStore key for this Programme.
+    if (! empty($remote_id)) {
+      $this->tempstore = \implode('.', [
+        $provider_id,
+        OccapiProviderManager::PROGRAMME_KEY,
+        $remote_id
+      ]);
+    }
 
     return $form;
   }
@@ -71,7 +141,32 @@ class ProgrammeApiForm extends ProgrammeForm {
   protected function actionsElement(array $form, FormStateInterface $form_state) {
     $element = [];
 
+    $element['submit'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Refresh data'),
+      '#submit' => ['::submitForm'],
+    ];
+
     return $element;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function submitForm(array &$form, FormStateInterface $form_state) {
+    $this->jsonDataFetcher
+      ->load($this->tempstore, $this->endpoint, TRUE);
+
+    $course_tempstore = $this->tempstore . '.' . OccapiProviderManager::COURSE_KEY;
+    $course_endpoint = $this->endpoint . '/' . OccapiProviderManager::COURSE_KEY;
+
+    $this->jsonDataFetcher
+      ->load($course_tempstore, $course_endpoint, TRUE);
+
+    $this->messenger
+      ->addMessage($this->t('Refreshed data for this Programme.'));
+
+    parent::submitForm($form, $form_state);
   }
 
 }
