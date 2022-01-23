@@ -629,6 +629,7 @@ class OccapiImportManager {
     $resource_id = $components[2];
 
     $existing_items = [];
+    $updated_items = [];
     $created_items = [];
     $failed_items = [];
 
@@ -649,17 +650,17 @@ class OccapiImportManager {
             ->getStorage(self::COURSE_ENTITY)
             ->loadByProperties([self::REMOTE_ID => $item_id]);
 
+          // Check if a Programme with the same remote ID already exists.
+          $programme = $this->entityTypeManager
+            ->getStorage(self::PROGRAMME_ENTITY)
+            ->loadByProperties([self::REMOTE_ID => $resource_id]);
+
+          foreach ($programme as $id => $entity) {
+            $programme_id = $id;
+          }
+
           // Create a new entity if none exists.
           if (empty($exists)) {
-            // Check if a Programme with the same remote ID already exists.
-            $programme = $this->entityTypeManager
-              ->getStorage(self::PROGRAMME_ENTITY)
-              ->loadByProperties([self::REMOTE_ID => $resource_id]);
-
-            foreach ($programme as $id => $entity) {
-              $programme_id = $id;
-            }
-
             $new = $this->createCourse($provider_id, $item, $programme_id);
 
             if (! empty($new)) {
@@ -676,7 +677,26 @@ class OccapiImportManager {
             }
           }
           else {
+            // Update entity reference field.
             foreach ($exists as $id => $entity) {
+              $referenced = $entity->get(self::REF_PROGRAMME)
+                ->referencedEntities();
+
+              $referenced_ids = [];
+
+              foreach ($referenced as $index => $programme) {
+                $referenced_ids[] = $programme->id();
+              }
+
+              if (! \in_array($programme_id, $referenced_ids)) {
+                $entity->get(self::REF_PROGRAMME)
+                  ->appendItem(['target_id' => $programme_id]);
+
+                $entity->save();
+
+                $updated_items[$id] = $entity;
+              }
+
               $existing_items[$id] = $entity;
             }
           }
@@ -693,8 +713,9 @@ class OccapiImportManager {
     }
 
     if (! empty($existing_items)) {
-      $message = $this->t('Found @count already existing Courses.', [
-        '@count' => \count($existing_items),
+      $message = $this->t('Updated @up of @there existing Courses.', [
+        '@up' => \count($updated_items),
+        '@there' => \count($existing_items),
       ]);
       $this->messenger->addWarning($message);
     }
