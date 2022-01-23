@@ -152,7 +152,7 @@ class JsonDataFetcher {
     // Build the HTTP request.
     try {
       $request = $this->httpClient->get($endpoint);
-      $code = $request->getCode();
+      $code = $request->getStatusCode();
     } catch (GuzzleException $e) {
       $code = $e->getCode();
     } catch (Exception $e) {
