@@ -46,7 +46,7 @@ function occapi_entities_bridge_entity_base_field_info(EntityTypeInterface $enti
     $fields[Manager::REMOTE_ID] = BaseFieldDefinition::create('string')
       ->setLabel(t('Remote ID'))
       ->setDisplayOptions('form', [
-        'type' => 'textfield',
+        'type' => 'string_textfield',
         'weight' => 101,
       ])
       ->setDisplayConfigurable('form', FALSE);
@@ -54,7 +54,7 @@ function occapi_entities_bridge_entity_base_field_info(EntityTypeInterface $enti
     $fields[Manager::REMOTE_URL] = BaseFieldDefinition::create('string')
       ->setLabel(t('Remote URL'))
       ->setDisplayOptions('form', [
-        'type' => 'textfield',
+        'type' => 'string_textfield',
         'weight' => 102,
       ])
       ->setDisplayConfigurable('form', FALSE);
