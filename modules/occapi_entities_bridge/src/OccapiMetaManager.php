@@ -34,6 +34,9 @@ class OccapiMetaManager {
   // OCCAPI Programme fields.
   const PROGRAMME_EQF     = 'eqf_level_provided';
 
+  // OCCAPI Course fields.
+  const COURSE_TERM       = 'academic_term';
+
   /**
    * The OCCAPI Course entity.
    *
@@ -146,6 +149,8 @@ class OccapiMetaManager {
     $json = $this->course->get(OccapiImportManager::JSON_META)->value;
     $data = \json_decode($json, TRUE);
 
+    $term = $this->course->get(self::COURSE_TERM)->value;
+
     $metadata = [];
 
     foreach ($programmes as $id => $programme) {
@@ -160,6 +165,7 @@ class OccapiMetaManager {
               $metadata[$id] = [
                 self::SCOPE => self::SCOPE_PROGRAMME,
                 self::META_YEAR => $array[self::META_YEAR],
+                self::COURSE_TERM => $term,
                 self::META_PROGRAMME_MC => $array[self::META_PROGRAMME_MC]
               ];
             }
@@ -172,6 +178,7 @@ class OccapiMetaManager {
             $metadata[$id] = [
               self::SCOPE => self::SCOPE_GLOBAL,
               self::META_YEAR => $data[self::META_YEAR],
+              self::COURSE_TERM => $term,
               self::META_PROGRAMME_MC => FALSE
             ];
           }
@@ -222,10 +229,11 @@ class OccapiMetaManager {
    */
   public function metaTable(array $metadata, string $entity_type_id): string {
     $header = [
-      $entity_type_id,
-      self::META_YEAR,
-      self::META_PROGRAMME_MC,
-      self::SCOPE
+      $this->entityTypeManager->getDefinition($entity_type_id)->getLabel(),
+      $this->t('Year'),
+      $this->t('Term'),
+      $this->t('Mandatory'),
+      $this->t('Scope'),
     ];
 
     $rows = [];
@@ -242,11 +250,19 @@ class OccapiMetaManager {
         $entity[$key]->toLink(),
         (\array_key_exists(self::META_YEAR, $value)) ?
           $value[self::META_YEAR] : '',
+        $value[self::COURSE_TERM],
         ($mandatory) ? $this->t('Yes') : '',
         (\array_key_exists(self::SCOPE, $value)) ?
-          $value[self::SCOPE] : ''
+          $value[self::SCOPE] : '',
       ];
     }
+
+    array_multisort(
+      array_column($rows, 1),
+      array_column($rows, 2),
+      array_column($rows, 3), SORT_DESC,
+      $rows
+    );
 
     $build['table'] = [
       '#type' => 'table',
