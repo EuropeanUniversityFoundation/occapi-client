@@ -153,7 +153,7 @@ class CourseApiForm extends CourseForm {
       $course_ext_attributes = $course_ext_data[JsonDataProcessor::ATTR_KEY];
 
       foreach ($course_ext_fields as $key => $value) {
-        $display_data[$key] = $course_ext_attributes[$key];
+        $display_data[$key] = $course_ext_attributes[$key] ?? [];
       }
     }
 
@@ -173,9 +173,19 @@ class CourseApiForm extends CourseForm {
             '#title' => $title,
           ];
 
+          if (isset($value[JsonDataProcessor::MLSTR_KEY])) {
+            $text = $value[JsonDataProcessor::MLSTR_KEY];
+          }
+          elseif (isset($value[JsonDataProcessor::STR_KEY])) {
+            $text = $value[JsonDataProcessor::STR_KEY];
+          }
+          else {
+            $text = '';
+          }
+
           $form[$key][$i][$key . '_' . $i . '_data'] = [
             '#type' => 'markup',
-            '#markup' => $value[JsonDataProcessor::MLSTR_KEY],
+            '#markup' => $text,
           ];
         }
       }

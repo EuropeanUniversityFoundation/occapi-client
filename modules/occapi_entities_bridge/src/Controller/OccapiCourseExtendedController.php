@@ -141,7 +141,7 @@ class OccapiCourseExtendedController extends ControllerBase {
       $course_ext_attributes = $course_ext_data[JsonDataProcessor::ATTR_KEY];
 
       foreach ($course_ext_fields as $key => $value) {
-        $display_data[$key] = $course_ext_attributes[$key];
+        $display_data[$key] = $course_ext_attributes[$key] ?? [];
       }
     }
 
@@ -169,10 +169,20 @@ class OccapiCourseExtendedController extends ControllerBase {
           $lang = $value[JsonDataProcessor::LANG_KEY];
           $title = ($lang) ? $key . ' <code>' . $lang . '</code>' : $key;
 
+          if (isset($value[JsonDataProcessor::MLSTR_KEY])) {
+            $text = $value[JsonDataProcessor::MLSTR_KEY];
+          }
+          elseif (isset($value[JsonDataProcessor::STR_KEY])) {
+            $text = $value[JsonDataProcessor::STR_KEY];
+          }
+          else {
+            $text = '';
+          }
+
           $markup .= '<details>';
           $markup .= '<summary>' . $title . '</summary>';
           $markup .= '<div class="details-wrapper">';
-          $markup .= $value[JsonDataProcessor::MLSTR_KEY];
+          $markup .= $text;
           $markup .= '</div>';
           $markup .= '</details>';
         }
