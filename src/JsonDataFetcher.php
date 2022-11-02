@@ -2,18 +2,18 @@
 
 namespace Drupal\occapi_client;
 
+use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\TempStore\SharedTempStoreFactory;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
-use Drupal\occapi_client\JsonDataProcessor;
 
 /**
- * JSON data fetching service.
+ * JSON data fetcher.
  */
-class JsonDataFetcher {
+class JsonDataFetcher implements JsonDataFetcherInterface {
 
   use StringTranslationTrait;
 
@@ -27,18 +27,18 @@ class JsonDataFetcher {
   protected $httpClient;
 
   /**
-  * JSON data processing service.
-  *
-  * @var \Drupal\occapi_client\JsonDataProcessor
-  */
-  protected $jsonDataProcessor;
-
-  /**
-   * The logger service.
+   * A logger instance.
    *
    * @var \Psr\Log\LoggerInterface
    */
   protected $logger;
+
+  /**
+   * The module handler to invoke the alter hooks with.
+   *
+   * @var \Drupal\Core\Extension\ModuleHandlerInterface
+   */
+  protected $moduleHandler;
 
   /**
    * An instance of the key/value store.
@@ -52,10 +52,10 @@ class JsonDataFetcher {
    *
    * @param \GuzzleHttp\Client $http_client
    *   HTTP client.
-   * @param \Drupal\occapi_client\JsonDataProcessor $json_data_processor
-   *   JSON data processing service.
    * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $logger_factory
    *   The logger factory service.
+   * @param \Drupal\Core\Extension\ModuleHandlerInterface $module_handler
+   *   The module handler to invoke the alter hooks with.
    * @param \Drupal\Core\TempStore\SharedTempStoreFactory $temp_store_factory
    *   The factory for the temp store object.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
@@ -63,20 +63,20 @@ class JsonDataFetcher {
    */
   public function __construct(
     Client $http_client,
-    JsonDataProcessor $json_data_processor,
     LoggerChannelFactoryInterface $logger_factory,
+    ModuleHandlerInterface $module_handler,
     SharedTempStoreFactory $temp_store_factory,
     TranslationInterface $string_translation
   ) {
     $this->httpClient         = $http_client;
-    $this->jsonDataProcessor  = $json_data_processor;
     $this->logger             = $logger_factory->get('occapi_client');
+    $this->moduleHandler      = $module_handler;
     $this->tempStore          = $temp_store_factory->get('occapi_client');
     $this->stringTranslation  = $string_translation;
   }
 
   /**
-   * Load JSON:API data from tempstore or external API.
+   * Load JSON:API data from tempstore or external API endpoint.
    *
    * @param string $temp_store_key
    *   A key from the key_value_expire table.
@@ -85,22 +85,30 @@ class JsonDataFetcher {
    * @param boolean $refresh
    *   Whether to force a refresh of the stored data.
    *
-   * @return string|NULL
+   * @return string|null
    *   A string containing the stored data or NULL.
    */
-  public function load(string $temp_store_key, string $endpoint, bool $refresh = FALSE): ?string {
+  public function load(string $temp_store_key, string $endpoint, $refresh = FALSE): ?string {
     // If tempstore is empty OR should be refreshed.
     if (empty($this->tempStore->get($temp_store_key)) || $refresh) {
-      // Get the data from the provided endpoint and store it.
-      $this->tempStore->set($temp_store_key, $this->get($endpoint));
+      // Get the data from the provided endpoint.
+      $raw = $this->get($endpoint);
+      // Allow other modules to alter the raw data before saving it.
+      $this->moduleHandler->alter('occapi_data_get', $raw);
+      // Save the data to tempstore.
+      $this->tempStore->set($temp_store_key, $raw);
       $message = $this->t("Loaded @key into temporary storage", [
         '@key' => $temp_store_key
       ]);
       $this->logger->notice($message);
     }
 
-    // Return whatever is in storage.
-    return $this->tempStore->get($temp_store_key);
+    // Retrieve whatever is in storage.
+    $data = $this->tempStore->get($temp_store_key);
+    // Allow other modules to alter the tempstore data before serving it.
+    $this->moduleHandler->alter('occapi_data_load', $data);
+
+    return $data;
   }
 
   /**
@@ -128,12 +136,10 @@ class JsonDataFetcher {
       watchdog_exception('occapi_client', $e->getMessage());
     }
 
-    // if ($this->jsonDataProcessor->validate($response)) {
-      // Extract the data from the Guzzle Stream.
-      $decoded = json_decode($response, TRUE);
-      // Encode the data for persistency.
-      $json_data = json_encode($decoded);
-    // }
+    // Extract the data from the Guzzle Stream.
+    $decoded = json_decode($response, TRUE);
+    // Encode the data for persistency.
+    $json_data = json_encode($decoded);
 
     // Return the data.
     return $json_data;
