@@ -10,8 +10,10 @@
 *
 * @param string $data
 *   Data being retrieved.
+* @param array $context
+*   Context containing unalterable $temp_store_key.
  */
-function hook_occapi_data_get_alter(string &$data) {
+function hook_occapi_data_get_alter(string &$data, array $context) {
   // Count the number of resources in the data set.
   $resource_types = ['programme', 'course'];
 
@@ -26,7 +28,7 @@ function hook_occapi_data_get_alter(string &$data) {
         '%type' => $resource_type,
       ]);
 
-      \Drupal::logger('my_module')->addMessage($message);
+      \Drupal::logger('my_module')->info($message);
     }
   }
 }
@@ -36,8 +38,10 @@ function hook_occapi_data_get_alter(string &$data) {
  *
  * @param string $data
  *   Data being loaded.
+ * @param array $context
+ *   Context containing unalterable $temp_store_key.
  */
-function hook_occapi_data_load_alter(string &$data) {
+function hook_occapi_data_load_alter(string &$data, array $context) {
   // Fix a known typo while it gets fixed.
   $replacements = [
     'programmme' => 'programme',

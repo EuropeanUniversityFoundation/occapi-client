@@ -89,12 +89,13 @@ class JsonDataFetcher implements JsonDataFetcherInterface {
    *   A string containing the stored data or NULL.
    */
   public function load(string $temp_store_key, string $endpoint, $refresh = FALSE): ?string {
+    $context = ['unalterable' => $temp_store_key];
     // If tempstore is empty OR should be refreshed.
     if (empty($this->tempStore->get($temp_store_key)) || $refresh) {
       // Get the data from the provided endpoint.
       $raw = $this->get($endpoint);
       // Allow other modules to alter the raw data before saving it.
-      $this->moduleHandler->alter('occapi_data_get', $raw);
+      $this->moduleHandler->alter('occapi_data_get', $raw, $context);
       // Save the data to tempstore.
       $this->tempStore->set($temp_store_key, $raw);
       $message = $this->t("Loaded @key into temporary storage", [
@@ -106,7 +107,7 @@ class JsonDataFetcher implements JsonDataFetcherInterface {
     // Retrieve whatever is in storage.
     $data = $this->tempStore->get($temp_store_key);
     // Allow other modules to alter the tempstore data before serving it.
-    $this->moduleHandler->alter('occapi_data_load', $data);
+    $this->moduleHandler->alter('occapi_data_load', $data, $context);
 
     return $data;
   }
