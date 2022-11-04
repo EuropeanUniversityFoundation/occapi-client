@@ -44,4 +44,24 @@ interface JsonDataFetcherInterface {
    */
   public function getResponseCode(string $endpoint);
 
+  /**
+   * Preprocess data before storing it in the key_value_expire table.
+   *
+   * @param string $data
+   *   The JSON:API data.
+   * @param string $temp_store_key
+   *   A key from the key_value_expire table.
+   */
+  public function preprocess(string &$data, string $temp_store_key);
+
+  /**
+   * Process data after retrieving it from the key_value_expire table.
+   *
+   * @param string $data
+   *   The JSON:API data.
+   * @param string $temp_store_key
+   *   A key from the key_value_expire table.
+   */
+  public function process(string &$data, string $temp_store_key);
+
 }

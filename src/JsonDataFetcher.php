@@ -89,13 +89,12 @@ class JsonDataFetcher implements JsonDataFetcherInterface {
    *   A string containing the stored data or NULL.
    */
   public function load(string $temp_store_key, string $endpoint, $refresh = FALSE): ?string {
-    $context = ['unalterable' => $temp_store_key];
     // If tempstore is empty OR should be refreshed.
     if (empty($this->tempStore->get($temp_store_key)) || $refresh) {
       // Get the data from the provided endpoint.
       $raw = $this->get($endpoint);
-      // Allow other modules to alter the raw data before saving it.
-      $this->moduleHandler->alter('occapi_data_get', $raw, $context);
+      // Preprocess the raw data before saving it.
+      $this->preprocess($raw, $temp_store_key);
       // Save the data to tempstore.
       $this->tempStore->set($temp_store_key, $raw);
       $message = $this->t("Loaded @key into temporary storage", [
@@ -106,8 +105,8 @@ class JsonDataFetcher implements JsonDataFetcherInterface {
 
     // Retrieve whatever is in storage.
     $data = $this->tempStore->get($temp_store_key);
-    // Allow other modules to alter the tempstore data before serving it.
-    $this->moduleHandler->alter('occapi_data_load', $data, $context);
+    // Process the tempstore data before serving it.
+    $this->preprocess($data, $temp_store_key);
 
     return $data;
   }
@@ -170,12 +169,45 @@ class JsonDataFetcher implements JsonDataFetcherInterface {
   }
 
   /**
+   * Preprocess data before storing it in the key_value_expire table.
+   *
+   * @param string $data
+   *   The JSON:API data.
+   * @param string $temp_store_key
+   *   A key from the key_value_expire table.
+   */
+  public function preprocess(string &$data, string $temp_store_key): void {
+    $context = ['unalterable' => $temp_store_key];
+
+    // Strip whitespace from the JSON data.
+    $data = \json_encode(\json_decode($data));
+
+    // Allow other modules to alter the raw data before saving it.
+    $this->moduleHandler->alter('occapi_data_get', $data, $context);
+  }
+
+  /**
+   * Process data after retrieving it from the key_value_expire table.
+   *
+   * @param string $data
+   *   The JSON:API data.
+   * @param string $temp_store_key
+   *   A key from the key_value_expire table.
+   */
+  public function process(string &$data, string $temp_store_key): void {
+    $context = ['unalterable' => $temp_store_key];
+
+    // Allow other modules to alter the tempstore data before serving it.
+    $this->moduleHandler->alter('occapi_data_load', $data, $context);
+  }
+
+  /**
    * Check the tempstore for the updated date.
    *
    * @param string $temp_store_key
    *   A key from the key_value_expire table.
    *
-   * @return int|NULL
+   * @return int|null
    *   A UNIX timestamp or NULL.
    */
   public function checkUpdated(string $temp_store_key): ?int {
@@ -194,7 +226,7 @@ class JsonDataFetcher implements JsonDataFetcherInterface {
    * @param string $endpoint
    *   The endpoint from which to fetch data.
    *
-   * @return string|NULL
+   * @return string|null
    *   A string containing the stored data or NULL.
    */
   public function getUpdated(string $temp_store_key, string $endpoint): ?string {
