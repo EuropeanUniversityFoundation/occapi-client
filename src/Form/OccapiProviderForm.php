@@ -63,28 +63,41 @@ class OccapiProviderForm extends EntityForm {
       '#tree' => FALSE,
     ];
 
-    $form['api_params']['base_url'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('Base URL'),
-      '#maxlength' => 255,
-      '#default_value' => $this->entity->get('base_url'),
-      '#description' => $this->t('Format: <em>https://domain.tld/occapi/v1</em>'),
-      '#required' => TRUE,
-    ];
+    $description = $this->t('@resource URL containing @links links.', [
+      '@resource' => $this->t('Institution %hei resource', ['%hei' => 'hei']),
+      '@links' => $this->t('%ounit, %programme and/or %course', [
+        '%ounit' => 'ounit',
+        '%programme' => 'programme',
+        '%course' => 'course',
+      ])
+    ]);
 
     $form['api_params']['hei_id'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Institution ID'),
       '#maxlength' => 255,
       '#default_value' => $this->entity->get('hei_id'),
-      '#description' => $this->t('Format: <em>domain.tld</em>'),
+      '#description' => $this->t('Format: %format', [
+        '%format' => 'domain.tld'
+      ]),
+      '#required' => TRUE,
+    ];
+
+    $form['api_params']['base_url'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Base URL'),
+      '#maxlength' => 255,
+      '#default_value' => $this->entity->get('base_url'),
+      '#description' => $description . '<br />' . $this->t('Format: %format', [
+        '%format' => 'https://example.com/occapi/v1/hei/domain.tld'
+      ]),
       '#required' => TRUE,
     ];
 
     $form['api_params']['ounit_filter'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Filter by Organizational Unit'),
-      '#default_value' => $this->entity->get('ounit_filter'),
+      '#default_value' => $this->entity->get('ounit_filter') ?? TRUE,
     ];
 
     $form['status'] = [
@@ -100,7 +113,35 @@ class OccapiProviderForm extends EntityForm {
       '#description' => $this->t('Description of the OCCAPI provider.'),
     ];
 
+    $form['refresh'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Refresh temporary storage on Save'),
+      '#default_value' => FALSE,
+      '#return_value' => TRUE,
+    ];
+
+    if (empty($this->entity->id())) {
+      $form['refresh']['#disabled'] = TRUE;
+    }
+
     return $form;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function validateForm(array &$form, FormStateInterface $form_state) {
+    $endpoint = $form_state->getValue('base_url');
+
+    $code = $this->jsonDataFetcher
+      ->getResponseCode($endpoint);
+
+    if ($code !== 200) {
+      $message = $this->t('Failed to fetch Institution data from %endpoint.', [
+        '%endpoint' => $endpoint
+      ]);
+      $form_state->setErrorByName('base_url', $message);
+    }
   }
 
   /**
@@ -117,23 +158,4 @@ class OccapiProviderForm extends EntityForm {
     return $result;
   }
 
-  /**
-   * {@inheritdoc}
-   */
-  public function validateForm(array &$form, FormStateInterface $form_state) {
-    $values   = $form_state->getValues();
-    $hei_id   = $values['hei_id'];
-    $base_url = $values['base_url'];
-    $endpoint = $base_url . '/' . Manager::HEI_KEY . '/' . $hei_id;
-
-    $code = $this->jsonDataFetcher
-      ->getResponseCode($endpoint);
-
-    if ($code !== 200) {
-      $message = $this->t('Failed to fetch Institution data from %endpoint.', [
-        '%endpoint' => $endpoint
-      ]);
-      $form_state->setErrorByName('base_url', $message);
-    }
-  }
 }

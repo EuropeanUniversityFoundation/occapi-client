@@ -9,4 +9,12 @@ use Drupal\Core\Config\Entity\ConfigEntityInterface;
  */
 interface OccapiProviderInterface extends ConfigEntityInterface {
 
+  /**
+   * Returns the Institution ID.
+   *
+   * @return string|null
+   *   The Institution ID if it exists, or NULL otherwise.
+   */
+  public function heiId();
+
 }

@@ -68,18 +68,18 @@ class OccapiProvider extends ConfigEntityBase implements OccapiProviderInterface
   protected $label;
 
   /**
-   * The OCCAPI provider base URL.
-   *
-   * @var string
-   */
-  protected $base_url;
-
-  /**
    * The Institution SCHAC code covered by the OCCAPI provider.
    *
    * @var string
    */
   protected $hei_id;
+
+  /**
+   * The OCCAPI provider base URL.
+   *
+   * @var string
+   */
+  protected $base_url;
 
   /**
    * Support for filtering by Organizational Unit.
@@ -101,5 +101,15 @@ class OccapiProvider extends ConfigEntityBase implements OccapiProviderInterface
    * @var string
    */
   protected $description;
+
+  /**
+   * Returns the Institution ID.
+   *
+   * @return string|null
+   *   The Institution ID if it exists, or NULL otherwise.
+   */
+  public function heiId(): ?string {
+    return $this->get('hei_id');
+  }
 
 }
