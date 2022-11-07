@@ -93,10 +93,13 @@ class JsonDataFetcher implements JsonDataFetcherInterface {
     if (empty($this->tempStore->get($temp_store_key)) || $refresh) {
       // Get the data from the provided endpoint.
       $raw = $this->get($endpoint);
+
       // Preprocess the raw data before saving it.
       $this->preprocess($raw, $temp_store_key);
+
       // Save the data to tempstore.
       $this->tempStore->set($temp_store_key, $raw);
+
       $message = $this->t("Loaded @key into temporary storage", [
         '@key' => $temp_store_key
       ]);
@@ -105,8 +108,9 @@ class JsonDataFetcher implements JsonDataFetcherInterface {
 
     // Retrieve whatever is in storage.
     $data = $this->tempStore->get($temp_store_key);
+
     // Process the tempstore data before serving it.
-    $this->preprocess($data, $temp_store_key);
+    $this->process($data, $temp_store_key);
 
     return $data;
   }

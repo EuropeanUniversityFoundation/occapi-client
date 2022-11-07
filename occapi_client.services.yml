@@ -2,15 +2,23 @@ services:
   occapi_client.fetch:
     class: Drupal\occapi_client\JsonDataFetcher
     arguments: ['@http_client', '@logger.factory', '@module_handler', '@tempstore.shared', '@string_translation']
+
   occapi_client.field_manager:
     class: Drupal\occapi_client\OccapiFieldManager
     arguments: []
+
   occapi_client.format:
     class: Drupal\occapi_client\DataFormatter
     arguments: ['@occapi_client.json', '@occapi_client.field_manager', '@string_translation']
+
   occapi_client.json:
     class: Drupal\occapi_client\JsonDataProcessor
     arguments: ['@logger.factory', '@string_translation']
+
   occapi_client.manager:
     class: Drupal\occapi_client\OccapiProviderManager
     arguments: ['@config.factory', '@occapi_client.format', '@entity_type.manager', '@occapi_client.fetch', '@occapi_client.json', '@logger.factory', '@string_translation']
+
+  occapi_client.tempstore:
+    class: Drupal\occapi_client\OccapiTempStore
+    arguments: ['@tempstore.shared', '@string_translation']
