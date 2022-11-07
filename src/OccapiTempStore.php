@@ -123,10 +123,10 @@ class OccapiTempStore implements OccapiTempStoreInterface {
    * @return string|null
    *   The error message if any error is detected.
    */
-  public function validateCollectionTempstoreKey(string $temp_store_key, ?string $resource_type = NULL, ?string $filter_type = NULL): ?string {
-    $errors = $this->validateTempstoreKey($temp_store_key);
+  public function validateCollectionTempstore(string $temp_store_key, ?string $resource_type = NULL, ?string $filter_type = NULL): ?string {
+    $error = $this->validateTempstoreKey($temp_store_key);
 
-    if (!empty($errors)) { return $errors; }
+    if (!empty($error)) { return $error; }
 
     $temp_store_params = $this->paramsFromKey($temp_store_key);
 
@@ -139,9 +139,9 @@ class OccapiTempStore implements OccapiTempStoreInterface {
         self::JSONAPI_TYPE_COURSE,
       ];
 
-      $errors = $this->validateTempstoreType($resource_type, $allowed_types);
+      $error = $this->validateTempstoreType($resource_type, $allowed_types);
 
-      if (!empty($errors)) { return $errors; }
+      if (!empty($error)) { return $error; }
 
       $param_resource_type = $temp_store_params[self::PARAM_RESOURCE_TYPE];
 
@@ -160,9 +160,9 @@ class OccapiTempStore implements OccapiTempStoreInterface {
         self::JSONAPI_TYPE_PROGRAMME
       ];
 
-      $errors = $this->validateResourceType($filter_type, $allowed_types);
+      $error = $this->validateResourceType($filter_type, $allowed_types);
 
-      if (!empty($errors)) { return $errors; }
+      if (!empty($error)) { return $error; }
 
       $param_filter_type = $temp_store_params[self::PARAM_FILTER_TYPE];
 
@@ -189,10 +189,10 @@ class OccapiTempStore implements OccapiTempStoreInterface {
    * @return string|null
    *   The error message if any error is detected.
    */
-  public function validateResourceTempstoreKey(string $temp_store_key, string $resource_type): ?string {
-    $errors = $this->validateTempstoreKey($temp_store_key, TRUE);
+  public function validateResourceTempstore(string $temp_store_key, string $resource_type): ?string {
+    $error = $this->validateTempstoreKey($temp_store_key, TRUE);
 
-    if (!empty($errors)) { return $errors; }
+    if (!empty($error)) { return $error; }
 
     $temp_store_params = $this->paramsFromKey($temp_store_key);
 
@@ -203,9 +203,9 @@ class OccapiTempStore implements OccapiTempStoreInterface {
         self::JSONAPI_TYPE_COURSE,
       ];
 
-      $errors = $this->validateTempstoreType($resource_type, $allowed_types);
+      $error = $this->validateTempstoreType($resource_type, $allowed_types);
 
-      if (!empty($errors)) { return $errors; }
+      if (!empty($error)) { return $error; }
 
       $param_resource_type = $temp_store_params[self::PARAM_RESOURCE_TYPE];
 
@@ -232,7 +232,7 @@ class OccapiTempStore implements OccapiTempStoreInterface {
    * @return string|null
    *   The error message if any error is detected.
    */
-  public function validateTempstoreKey(string $temp_store_key, boolean $single = FALSE): ?string {
+  public function validateTempstore(string $temp_store_key, boolean $single = FALSE): ?string {
     $temp_store_params = $this->paramsFromKey($temp_store_key);
 
     if (empty($temp_store_params[self::PARAM_PROVIDER])) {
@@ -280,7 +280,7 @@ class OccapiTempStore implements OccapiTempStoreInterface {
    * @return string|null
    *   The error message if any error is detected.
    */
-  public function validateTempstoreKeyType(string $resource_type, array $allowed_types): ?string {
+  public function validateTempstoreType(string $resource_type, array $allowed_types): ?string {
     if (!\in_array($resource_type, $allowed_types)) {
       return $this->t('Resource type must be one of %allowed, %type given.', [
         '%allowed' => \implode(', ', $allowed_types),

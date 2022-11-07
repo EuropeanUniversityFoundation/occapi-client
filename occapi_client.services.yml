@@ -22,3 +22,7 @@ services:
   occapi_client.tempstore:
     class: Drupal\occapi_client\OccapiTempStore
     arguments: ['@tempstore.shared', '@string_translation']
+
+  occapi_client.relationships:
+    class: Drupal\occapi_client\OccapiRelationships
+    arguments: ['@occapi_client.tempstore']
