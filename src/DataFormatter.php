@@ -69,27 +69,34 @@ class DataFormatter {
 
     $rows = [];
 
-    $data = $collection[Json::DATA_KEY];
+    if (array_key_exists(Json::DATA_KEY, $collection)) {
+      $data = $collection[Json::DATA_KEY];
 
-    foreach ($data as $i => $resource) {
-      $uri = $this->jsonDataProcessor->getLink($resource, Json::SELF_KEY);
-      $options = ['attributes' => ['target' => '_blank']];
+      foreach ($data as $i => $resource) {
+        $uri = $this->jsonDataProcessor->getLink($resource, Json::SELF_KEY);
+        $options = ['attributes' => ['target' => '_blank']];
 
-      $row = [
-        $this->jsonDataProcessor->getType($resource),
-        $this->jsonDataProcessor->getId($resource),
-        $this->jsonDataProcessor->getTitle($resource),
-        Link::fromTextAndUrl(Json::SELF_KEY, Url::fromUri($uri, $options))
-      ];
+        $row = [
+          $this->jsonDataProcessor->getType($resource),
+          $this->jsonDataProcessor->getId($resource),
+          $this->jsonDataProcessor->getTitle($resource),
+          Link::fromTextAndUrl(Json::SELF_KEY, Url::fromUri($uri, $options))
+        ];
 
-      $rows[] = $row;
+        $rows[] = $row;
+      }
     }
 
     $build['table'] = [
       '#type' => 'table',
       '#header' => $header,
       '#rows' => $rows,
+      '#empty' => $this->t('No data to display.'),
     ];
+
+    if (array_key_exists('errors', $collection)) {
+      $build['table']['#empty'] = $this->t('An error occurred.');
+    }
 
     return render($build);
   }
