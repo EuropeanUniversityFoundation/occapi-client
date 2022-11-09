@@ -6,6 +6,7 @@ use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\occapi_client\JsonDataFetcher;
 use Drupal\occapi_client\OccapiProviderManager as Manager;
+use Drupal\occapi_client\OccapiTempStoreInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -15,6 +16,15 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 class OccapiProviderForm extends EntityForm {
 
+  const JSONAPI_TYPE_HEI = OccapiTempStoreInterface::JSONAPI_TYPE_HEI;
+
+  const PARAM_PROVIDER = OccapiTempStoreInterface::PARAM_PROVIDER;
+  const PARAM_FILTER_TYPE = OccapiTempStoreInterface::PARAM_FILTER_TYPE;
+  const PARAM_FILTER_ID = OccapiTempStoreInterface::PARAM_FILTER_ID;
+  const PARAM_RESOURCE_TYPE = OccapiTempStoreInterface::PARAM_RESOURCE_TYPE;
+  const PARAM_RESOURCE_ID = OccapiTempStoreInterface::PARAM_RESOURCE_ID;
+
+
   /**
    * JSON data fetcher service.
    *
@@ -23,12 +33,20 @@ class OccapiProviderForm extends EntityForm {
   protected $jsonDataFetcher;
 
   /**
+   * Shared TempStore manager.
+   *
+   * @var \Drupal\occapi_client\OccapiTempStoreInterface
+   */
+  protected $occapiTempStore;
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
     // Instantiates this form class.
     $instance = parent::create($container);
     $instance->jsonDataFetcher = $container->get('occapi_client.fetch');
+    $instance->occapiTempStore = $container->get('occapi_client.tempstore');
     return $instance;
   }
 
@@ -148,6 +166,28 @@ class OccapiProviderForm extends EntityForm {
    * {@inheritdoc}
    */
   public function save(array $form, FormStateInterface $form_state) {
+    $endpoint = $form_state->getValue('base_url');
+    $refresh = $form_state->getValue('refresh');
+
+    if ($refresh && !empty($endpoint)) {
+      $provider_id = $form_state->getValue('id');
+      $hei_id = $form_state->getValue('hei_id');
+
+      $temp_store_params = [
+        self::PARAM_PROVIDER => $provider_id,
+        self::PARAM_FILTER_TYPE => NULL,
+        self::PARAM_FILTER_ID => NULL,
+        self::PARAM_RESOURCE_TYPE => self::JSONAPI_TYPE_HEI,
+        self::PARAM_RESOURCE_ID => $hei_id,
+      ];
+
+      $temp_store_key = $this->occapiTempStore
+        ->keyFromParams($temp_store_params);
+
+      $json_data = $this->jsonDataFetcher
+        ->load($temp_store_key, $endpoint, TRUE);
+    }
+
     $result = parent::save($form, $form_state);
     $message_args = ['%label' => $this->entity->label()];
     $message = $result == SAVED_NEW

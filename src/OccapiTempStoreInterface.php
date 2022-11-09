@@ -32,6 +32,17 @@ interface OccapiTempStoreInterface {
   public function paramsFromKey(string $temp_store_key): array;
 
   /**
+   * Build a TempStore key from parameters.
+   *
+   * @param array $temp_store_params
+   *   The TempStore parameters.
+   *
+   * @return string
+   *   The TempStore key.
+   */
+  public function keyFromParams(array $temp_store_params): string;
+
+  /**
    * Validate a TempStore key by parameters.
    *
    * @param string $temp_store_key
@@ -43,17 +54,6 @@ interface OccapiTempStoreInterface {
    *   The error message if any error is detected.
    */
   public function validateTempstoreKey(string $temp_store_key, bool $single = FALSE): ?string;
-
-  /**
-   * Build a TempStore key from parameters.
-   *
-   * @param array $temp_store_params
-   *   The TempStore parameters.
-   *
-   * @return string
-   *   The TempStore key.
-   */
-  public function keyFromParams(array $temp_store_params): string;
 
   /**
    * Validate a collection TempStore key.

@@ -91,8 +91,8 @@ class OccapiTempStore implements OccapiTempStoreInterface {
   public function keyFromParams(array $temp_store_params): string {
     $parts = [$temp_store_params[self::PARAM_PROVIDER]];
 
-    $has_filter_type = !empty(self::PARAM_FILTER_TYPE);
-    $has_filter_id = !empty(self::PARAM_FILTER_ID);
+    $has_filter_type = !empty($temp_store_params[self::PARAM_FILTER_TYPE]);
+    $has_filter_id = !empty($temp_store_params[self::PARAM_FILTER_ID]);
 
     if ($has_filter_type && $has_filter_id) {
       $parts[] = $temp_store_params[self::PARAM_FILTER_TYPE];
@@ -101,13 +101,61 @@ class OccapiTempStore implements OccapiTempStoreInterface {
 
     $parts[] = $temp_store_params[self::PARAM_RESOURCE_TYPE];
 
-    if (!empty(self::PARAM_RESOURCE_ID)) {
+    if (!empty($temp_store_params[self::PARAM_RESOURCE_ID])) {
       $parts[] = $temp_store_params[self::PARAM_RESOURCE_ID];
     }
 
     $temp_store_key = \implode(self::TEMPSTORE_KEY_SEPARATOR, $parts);
 
     return $temp_store_key;
+  }
+
+  /**
+   * Validate a TempStore key by parameters.
+   *
+   * @param string $temp_store_key
+   *   The TempStore key.
+   * @param boolean $single
+   *   Whether the key refers to a single resource (defaults to FALSE).
+   *
+   * @return string|null
+   *   The error message if any error is detected.
+   */
+  public function validateTempstoreKey(string $temp_store_key, bool $single = FALSE): ?string {
+    $temp_store_params = $this->paramsFromKey($temp_store_key);
+
+    if (empty($temp_store_params[self::PARAM_PROVIDER])) {
+      return $this->t('Empty parameter: %param', [
+        '%param' => self::PARAM_PROVIDER
+      ]);
+    }
+
+    if (empty($temp_store_params[self::PARAM_RESOURCE_TYPE])) {
+      return $this->t('Empty parameter: %param', [
+        '%param' => self::PARAM_RESOURCE_TYPE
+      ]);
+    }
+
+    if ($single && empty($temp_store_params[self::PARAM_RESOURCE_ID])) {
+      return $this->t('Missing resource ID for single resource.');
+    }
+
+    if (!$single && !empty($temp_store_params[self::PARAM_RESOURCE_ID])) {
+      return $this->t('Unexpected resource ID for resource collection.');
+    }
+
+    $no_filter_type = (empty($temp_store_params[self::PARAM_FILTER_TYPE]));
+    $no_filter_id = (empty($temp_store_params[self::PARAM_FILTER_ID]));
+
+    if ($no_filter_type && !$no_filter_id) {
+      return $this->t('Filter type provided, missing filter ID.');
+    }
+
+    if (!$no_filter_type && $no_filter_id) {
+      return $this->t('Filter ID provided, missing filter type.');
+    }
+
+    return NULL;
   }
 
   /**
@@ -149,7 +197,7 @@ class OccapiTempStore implements OccapiTempStoreInterface {
         return $this->t('Data contains %param instead of %type.', [
           '%param' => $param_resource_type,
           '%type' => $resource_type,
-        ])
+        ]);
       }
     }
 
@@ -170,7 +218,7 @@ class OccapiTempStore implements OccapiTempStoreInterface {
         return $this->t('Data is filtered by %param instead of %type.', [
           '%param' => $param_filter_type,
           '%type' => $filter_type,
-        ])
+        ]);
       }
     }
 
@@ -213,59 +261,11 @@ class OccapiTempStore implements OccapiTempStoreInterface {
         return $this->t('Data contains %param instead of %type.', [
           '%param' => $param_resource_type,
           '%type' => $resource_type,
-        ])
+        ]);
       }
     }
 
     // No errors found.
-    return NULL;
-  }
-
-  /**
-   * Validate a TempStore key by parameters.
-   *
-   * @param string $temp_store_key
-   *   The TempStore key.
-   * @param boolean $single
-   *   Whether the key refers to a single resource (defaults to FALSE).
-   *
-   * @return string|null
-   *   The error message if any error is detected.
-   */
-  public function validateTempstore(string $temp_store_key, boolean $single = FALSE): ?string {
-    $temp_store_params = $this->paramsFromKey($temp_store_key);
-
-    if (empty($temp_store_params[self::PARAM_PROVIDER])) {
-      return $this->t('Empty parameter: %param', [
-        '%param' => self::PARAM_PROVIDER
-      ]);
-    }
-
-    if (empty($temp_store_params[self::PARAM_RESOURCE_TYPE])) {
-      return $this->t('Empty parameter: %param', [
-        '%param' => self::PARAM_RESOURCE_TYPE
-      ]);
-    }
-
-    if ($single && empty($temp_store_params[self::PARAM_RESOURCE_ID])) {
-      return $this->t('Missing resource ID for single resource.');
-    }
-
-    if (!$single && !empty($temp_store_params[self::PARAM_RESOURCE_ID])) {
-      return $this->t('Unexpected resource ID for resource collection.');
-    }
-
-    $no_filter_type = (empty($temp_store_params[self::PARAM_FILTER_TYPE]));
-    $no_filter_id = (empty($temp_store_params[self::PARAM_FILTER_ID]));
-
-    if ($no_filter_type && !$no_filter_id) {
-      return $this->t('Filter type provided, missing filter ID.');
-    }
-
-    if (!$no_filter_type && $no_filter_id) {
-      return $this->t('Filter ID provided, missing filter type.');
-    }
-
     return NULL;
   }
 
@@ -280,12 +280,12 @@ class OccapiTempStore implements OccapiTempStoreInterface {
    * @return string|null
    *   The error message if any error is detected.
    */
-  public function validateTempstoreType(string $resource_type, array $allowed_types): ?string {
+  public function validateResourceType(string $resource_type, array $allowed_types): ?string {
     if (!\in_array($resource_type, $allowed_types)) {
       return $this->t('Resource type must be one of %allowed, %type given.', [
         '%allowed' => \implode(', ', $allowed_types),
         '%type' => $resource_type,
-      ])
+      ]);
     }
 
     // No errors found.
