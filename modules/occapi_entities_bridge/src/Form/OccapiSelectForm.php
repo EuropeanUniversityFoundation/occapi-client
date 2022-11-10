@@ -9,14 +9,25 @@ use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\Core\Url;
 use Drupal\occapi_client\DataFormatter;
-use Drupal\occapi_client\JsonDataProcessor;
-use Drupal\occapi_client\OccapiProviderManager;
+use Drupal\occapi_client\JsonDataProcessorInterface;
+use Drupal\occapi_client\JsonDataSchemaInterface;
+use Drupal\occapi_client\OccapiProviderManagerInterface;
+use Drupal\occapi_client\OccapiTempStoreInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Provides an OCCAPI entities select form.
  */
 class OccapiSelectForm extends FormBase {
+
+  const TYPE_HEI = OccapiTempStoreInterface::TYPE_HEI;
+  const TYPE_OUNIT = OccapiTempStoreInterface::TYPE_OUNIT;
+  const TYPE_PROGRAMME = OccapiTempStoreInterface::TYPE_PROGRAMME;
+  const TYPE_COURSE = OccapiTempStoreInterface::TYPE_COURSE;
+
+  const DATA_KEY = JsonDataSchemaInterface::JSONAPI_DATA;
+  const LINKS_KEY = JsonDataSchemaInterface::JSONAPI_LINKS;
+  const SELF_KEY = JsonDataSchemaInterface::JSONAPI_SELF;
 
   /**
    * Drupal\Core\Session\AccountProxyInterface definition.
@@ -47,9 +58,16 @@ class OccapiSelectForm extends FormBase {
   protected $dataFormatter;
 
   /**
-   * JSON data processing service.
+   * the OCCAPI data loader.
    *
-   * @var \Drupal\occapi_client\JsonDataProcessor
+   * @var \Drupal\occapi_client\OccapiDataLoaderInterface
+   */
+  protected $dataLoader;
+
+  /**
+   * the JSON data processor.
+   *
+   * @var \Drupal\occapi_client\JsonDataProcessorInterface
    */
   protected $jsonDataProcessor;
 
@@ -61,11 +79,18 @@ class OccapiSelectForm extends FormBase {
   protected $messenger;
 
   /**
-   * OCCAPI provider manager service.
+   * The OCCAPI provider manager.
    *
-   * @var \Drupal\occapi_client\OccapiProviderManager
+   * @var \Drupal\occapi_client\OccapiProviderManagerInterface
    */
   protected $providerManager;
+
+  /**
+   * The shared TempStore key manager.
+   *
+   * @var \Drupal\occapi_client\OccapiTempStoreInterface
+   */
+  protected $occapiTempStore;
 
   /**
    * {@inheritdoc}
@@ -73,11 +98,13 @@ class OccapiSelectForm extends FormBase {
   public static function create(ContainerInterface $container) {
     // Instantiates this form class.
     $instance = parent::create($container);
-    $instance->dataFormatter      = $container->get('occapi_client.format');
-    $instance->jsonDataProcessor  = $container->get('occapi_client.json');
-    $instance->messenger          = $container->get('messenger');
-    $instance->providerManager    = $container->get('occapi_client.manager');
-    $instance->currentUser        = $container->get('current_user');
+    $instance->dataFormatter     = $container->get('occapi_client.format');
+    $instance->dataLoader        = $container->get('occapi_client.load');
+    $instance->jsonDataProcessor = $container->get('occapi_client.json');
+    $instance->messenger         = $container->get('messenger');
+    $instance->providerManager   = $container->get('occapi_client.manager');
+    $instance->occapiTempStore   = $container->get('occapi_client.tempstore');
+    $instance->currentUser       = $container->get('current_user');
     return $instance;
   }
 
@@ -94,13 +121,17 @@ class OccapiSelectForm extends FormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
     // Give a user with permission the opportunity to add an entity manually.
     if ($this->currentUser->hasPermission('bypass import occapi entities')) {
-      $add_programme_link = Link::fromTextAndUrl(t('add a new Programme'),
+      $add_programme_text = $this->t('add a new Programme');
+      $add_programme_link = Link::fromTextAndUrl($add_programme_text,
         Url::fromRoute('entity.programme.add_form'))->toString();
-      $add_course_link = Link::fromTextAndUrl(t('add a new Course'),
+
+      $add_course_text = $this->t('add a new Course');
+      $add_course_link = Link::fromTextAndUrl($add_course_text,
         Url::fromRoute('entity.course.add_form'))->toString();
 
-      $notice = $this->t('You can bypass this form and @add_programme or @add_course manually.',[
-        '@add_programme' => $add_programme_link,
+      $notice = $this->t('You can @act and @add_prog or @add_course manually.',[
+        '@act' => $this->t('bypass this form'),
+        '@add_prog' => $add_programme_link,
         '@add_course' => $add_course_link
       ]);
 
@@ -108,15 +139,13 @@ class OccapiSelectForm extends FormBase {
     }
 
     // Load all available OCCAPI providers.
-    $providers = $this->providerManager
-      ->getProviders();
+    $providers = $this->providerManager->getProviders();
 
     // Build a select element with the provider list.
     $provider_titles = [];
 
     foreach ($providers as $id => $provider) {
-      $title = $provider->label();
-      $title .= ' ('. $provider->get('hei_id') .')';
+      $title = $provider->label() . ' (' . $provider->heiId() . ')';
       $provider_titles[$id] = $title;
     }
 
@@ -229,11 +258,18 @@ class OccapiSelectForm extends FormBase {
     $provider_id = $form_state->getValue('provider_select');
     $programme_id = $form_state->getValue('programme_select');
 
-    $args = [$provider_id, OccapiProviderManager::PROGRAMME_KEY, $programme_id];
-    $tempstore = \implode('.', $args);
+    $temp_store_params = [
+      OccapiTempStoreInterface::PARAM_PROVIDER => $provider_id,
+      OccapiTempStoreInterface::PARAM_FILTER_TYPE => NULL,
+      OccapiTempStoreInterface::PARAM_FILTER_ID => NULL,
+      OccapiTempStoreInterface::PARAM_RESOURCE_TYPE => self::TYPE_PROGRAMME,
+      OccapiTempStoreInterface::PARAM_RESOURCE_ID => $programme_id,
+    ];
+
+    $temp_store_key = $this->occapiTempStore->keyFromParams($temp_store_params);
 
     $form_state->setRedirect('occapi_entities_bridge.import',[
-      'tempstore' => $tempstore
+      'tempstore' => $temp_store_key
     ]);
   }
 
@@ -249,65 +285,48 @@ class OccapiSelectForm extends FormBase {
     $options = ['' => '- None -'];
 
     if ($provider_id) {
-
-      $provider = $this->providerManager
-        ->getProvider($provider_id);
+      $provider = $this->providerManager->getProvider($provider_id);
+      $filtered = $provider->get('ounit_filter');
 
       // Fetch Institution data.
-      $this->heiResource = $this->providerManager
-        ->loadInstitution($provider_id);
+      $this->heiResource = $this->dataLoader->loadInstitution($provider_id);
+      $hei_links = $this->heiResource[self::LINKS_KEY];
+      $has_ounits = array_key_exists(self::TYPE_OUNIT, $hei_links);
+      $has_programmes = array_key_exists(self::TYPE_PROGRAMME, $hei_links);
 
       // Fetch Programme data from Institution resource links.
-      if (
-        ! $provider->get('ounit_filter') &&
-        array_key_exists(
-          OccapiProviderManager::PROGRAMME_KEY,
-          $this->heiResource[JsonDataProcessor::LINKS_KEY]
-        )
-      ) {
-        $programme_collection = $this->providerManager
-          ->loadProgrammes($provider_id);
-
+      if (!$filtered && $has_programmes) {
+        $programme_collection = $this->dataLoader->loadProgrammes($provider_id);
         $options += $this->jsonDataProcessor
-          ->getTitles($programme_collection);
+          ->getResourceTitles($programme_collection);
       }
 
       // Fetch Programme data from all available OUnit resource links.
-      if (
-        $provider->get('ounit_filter') &&
-        array_key_exists(
-          OccapiProviderManager::OUNIT_KEY,
-          $this->heiResource[JsonDataProcessor::LINKS_KEY]
-        )
-      ) {
-        $programme_collection = [JsonDataProcessor::DATA_KEY => []];
+      if ($filtered && $has_ounits) {
+        $programme_collection = [self::DATA_KEY => []];
 
-        $ounit_collection = $this->providerManager
-          ->loadOunits($provider_id);
+        $ounit_collection = $this->dataLoader->loadOunits($provider_id);
+        $ounit_data = $ounit_collection[self::DATA_KEY];
 
-        foreach ($ounit_collection[JsonDataProcessor::DATA_KEY] as $i => $resource) {
-          $ounit_id     = $this->jsonDataProcessor->getId($resource);
-          $ounit_title  = $this->jsonDataProcessor->getTitle($resource);
-          $ounit_label  = $ounit_title . ' (' . $ounit_id . ')';
+        foreach ($ounit_data as $i => $resource) {
+          $ounit_id = $this->jsonDataProcessor->getResourceId($resource);
+          $ounit_title = $this->jsonDataProcessor->getResourceTitle($resource);
+          $ounit_label = $ounit_title . ' (' . $ounit_id . ')';
 
-          $ounit_resource = $this->providerManager
+          $ounit_resource = $this->dataLoader
             ->loadOunit($provider_id, $ounit_id);
+          $ounit_links = $ounit_resource[self::LINKS_KEY];
 
-          if (
-            array_key_exists(
-              OccapiProviderManager::PROGRAMME_KEY,
-              $ounit_resource[JsonDataProcessor::LINKS_KEY]
-            )
-          ) {
-            $ounit_programmes = $this->providerManager
+          if (array_key_exists(self::TYPE_PROGRAMME, $ounit_links)) {
+            $ounit_programmes = $this->dataLoader
               ->loadOunitProgrammes($provider_id, $ounit_id);
 
-            if (! empty($ounit_programmes[JsonDataProcessor::DATA_KEY])) {
-              $partial_data = $ounit_programmes[JsonDataProcessor::DATA_KEY];
-              $programme_collection[JsonDataProcessor::DATA_KEY] += $partial_data;
+            if (! empty($ounit_programmes[self::DATA_KEY])) {
+              $partial_data = $ounit_programmes[self::DATA_KEY];
+              $programme_collection[self::DATA_KEY] += $partial_data;
 
               $programme_titles = $this->jsonDataProcessor
-                ->getTitles($ounit_programmes);
+                ->getResourceTitles($ounit_programmes);
 
               $options[$ounit_label] = $programme_titles;
             }
@@ -334,22 +353,17 @@ class OccapiSelectForm extends FormBase {
     $programme_id = $form_state->getValue('programme_select');
 
     if (! empty($provider_id) && !empty($programme_id)) {
-      $programme_resource = $this->providerManager
+      $programme_resource = $this->dataLoader
         ->loadProgramme($provider_id, $programme_id);
-
+      $programme_links = $programme_resource[self::LINKS_KEY];
       $programme_markup = $this->dataFormatter
         ->programmeResourceTable($programme_resource);
 
       $markup = '<h3>' . $this->t('Programme data') . '</h3>';
       $markup .= $programme_markup;
 
-      if (
-        \array_key_exists(
-          OccapiProviderManager::COURSE_KEY,
-          $programme_resource[JsonDataProcessor::LINKS_KEY]
-        )
-      ) {
-        $course_collection = $this->providerManager
+      if (\array_key_exists(self::TYPE_COURSE, $programme_links)) {
+        $course_collection = $this->dataLoader
           ->loadProgrammeCourses($provider_id, $programme_id);
 
         $course_markup = $this->dataFormatter

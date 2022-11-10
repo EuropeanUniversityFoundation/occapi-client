@@ -113,7 +113,6 @@ class OccapiProviderManager implements OccapiProviderManagerInterface {
       OccapiTempStoreInterface::PARAM_FILTER_ID => NULL,
       OccapiTempStoreInterface::PARAM_RESOURCE_TYPE => self::TYPE_HEI,
       OccapiTempStoreInterface::PARAM_RESOURCE_ID => $provider->heiId(),
-
     ];
 
     $hei_temp_store_key = $this->occapiTempStore

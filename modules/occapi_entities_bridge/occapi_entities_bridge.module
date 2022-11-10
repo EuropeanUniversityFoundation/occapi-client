@@ -10,7 +10,7 @@ use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\user\Entity\User;
-use Drupal\occapi_entities_bridge\OccapiImportManager as Manager;
+use Drupal\occapi_entities_bridge\OccapiImportManager;
 
 /**
  * Implements hook_ENTITY_TYPE_prepare_form().
@@ -25,8 +25,6 @@ function occapi_entities_bridge_occapi_provider_prepare_form(EntityInterface $en
 
     if (! $result['status']) {
       \Drupal::service('messenger')->addWarning($result['message']);
-    } else {
-      \Drupal::service('messenger')->addMessage($result['message']);
     }
   }
 }
@@ -38,12 +36,12 @@ function occapi_entities_bridge_occapi_provider_prepare_form(EntityInterface $en
  */
 function occapi_entities_bridge_entity_base_field_info(EntityTypeInterface $entity_type) {
   $occapi_entity_types = [
-    Manager::PROGRAMME_ENTITY,
-    Manager::COURSE_ENTITY
+    OccapiImportManager::PROGRAMME_ENTITY,
+    OccapiImportManager::COURSE_ENTITY
   ];
 
   if (\in_array($entity_type->id(), $occapi_entity_types)) {
-    $fields[Manager::REMOTE_ID] = BaseFieldDefinition::create('string')
+    $fields[OccapiImportManager::REMOTE_ID] = BaseFieldDefinition::create('string')
       ->setLabel(t('Remote ID'))
       ->setDisplayOptions('form', [
         'type' => 'string_textfield',
@@ -51,7 +49,7 @@ function occapi_entities_bridge_entity_base_field_info(EntityTypeInterface $enti
       ])
       ->setDisplayConfigurable('form', FALSE);
 
-    $fields[Manager::REMOTE_URL] = BaseFieldDefinition::create('string')
+    $fields[OccapiImportManager::REMOTE_URL] = BaseFieldDefinition::create('string')
       ->setLabel(t('Remote URL'))
       ->setDisplayOptions('form', [
         'type' => 'string_textfield',
@@ -59,8 +57,8 @@ function occapi_entities_bridge_entity_base_field_info(EntityTypeInterface $enti
       ])
       ->setDisplayConfigurable('form', FALSE);
 
-    if ($entity_type->id() === Manager::COURSE_ENTITY) {
-      $fields[Manager::JSON_META] = BaseFieldDefinition::create('json')
+    if ($entity_type->id() === OccapiImportManager::COURSE_ENTITY) {
+      $fields[OccapiImportManager::JSON_META] = BaseFieldDefinition::create('json')
         ->setLabel(t('JSON metadata'))
         ->setDisplayOptions('form', [
           'type' => 'json_textarea',
@@ -81,12 +79,12 @@ function occapi_entities_bridge_entity_base_field_info(EntityTypeInterface $enti
 function occapi_entities_bridge_entity_type_build(array &$entity_types) {
 
   /** @var $entity_types \Drupal\Core\Entity\EntityTypeInterface[] */
-  $entity_types[Manager::PROGRAMME_ENTITY]
+  $entity_types[OccapiImportManager::PROGRAMME_ENTITY]
     ->setFormClass('api', 'Drupal\\occapi_entities_bridge\\Form\\ProgrammeApiForm')
     ->setLinkTemplate('api-form', '/occapi/programme/{programme}/api');
 
   /** @var $entity_types \Drupal\Core\Entity\EntityTypeInterface[] */
-  $entity_types[Manager::COURSE_ENTITY]
+  $entity_types[OccapiImportManager::COURSE_ENTITY]
     ->setFormClass('api', 'Drupal\\occapi_entities_bridge\\Form\\CourseApiForm')
     ->setLinkTemplate('api-form', '/occapi/course/{course}/api');
 }
@@ -125,8 +123,8 @@ function occapi_entities_bridge_form_programme_edit_form_alter(&$form, FormState
  * Performs the actual form alter for the common fields.
  */
 function _occapi_entities_bridge_api_fields(&$form, FormStateInterface $form_state) {
-  $remote_id  = $form[Manager::REMOTE_ID];
-  $remote_url = $form[Manager::REMOTE_URL];
+  $remote_id  = $form[OccapiImportManager::REMOTE_ID];
+  $remote_url = $form[OccapiImportManager::REMOTE_URL];
 
   $form['api_fields'] = [
     '#type' => 'details',
@@ -140,24 +138,24 @@ function _occapi_entities_bridge_api_fields(&$form, FormStateInterface $form_sta
     $remote_url['widget'][0]['value']['#attributes']['readonly'] = 'readonly';
   }
 
-  $form['api_fields'][Manager::REMOTE_ID]  = $remote_id;
-  $form['api_fields'][Manager::REMOTE_URL] = $remote_url;
+  $form['api_fields'][OccapiImportManager::REMOTE_ID]  = $remote_id;
+  $form['api_fields'][OccapiImportManager::REMOTE_URL] = $remote_url;
 
-  unset($form[Manager::REMOTE_ID]);
-  unset($form[Manager::REMOTE_URL]);
+  unset($form[OccapiImportManager::REMOTE_ID]);
+  unset($form[OccapiImportManager::REMOTE_URL]);
 }
 
 /**
  * Performs the actual form alter for the Course metadata field.
  */
 function _occapi_entities_bridge_api_metadata(&$form, FormStateInterface $form_state) {
-  $metadata = $form[Manager::JSON_META];
+  $metadata = $form[OccapiImportManager::JSON_META];
 
   if (! \Drupal::currentUser()->hasPermission('administer occapi fields')) {
     $metadata['widget'][0]['value']['#attributes']['readonly']  = 'readonly';
   }
 
-  $form['api_fields'][Manager::JSON_META] = $metadata;
+  $form['api_fields'][OccapiImportManager::JSON_META] = $metadata;
 
-  unset($form[Manager::JSON_META]);
+  unset($form[OccapiImportManager::JSON_META]);
 }
