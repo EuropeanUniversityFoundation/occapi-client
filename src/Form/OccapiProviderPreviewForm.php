@@ -7,9 +7,10 @@ use Drupal\Core\Ajax\HtmlCommand;
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\occapi_client\DataFormatter;
-use Drupal\occapi_client\JsonDataFetcher;
-use Drupal\occapi_client\JsonDataProcessor as Json;
-use Drupal\occapi_client\OccapiProviderManager as Manager;
+use Drupal\occapi_client\JsonDataProcessorInterface;
+use Drupal\occapi_client\JsonDataSchemaInterface;
+use Drupal\occapi_client\OccapiDataLoaderInterface;
+use Drupal\occapi_client\OccapiTempStoreInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -21,6 +22,14 @@ class OccapiProviderPreviewForm extends EntityForm {
 
   const JSONAPI_RESPONSE  = 'JSON:API response';
 
+  const DATA_KEY  = JsonDataSchemaInterface::JSONAPI_DATA;
+  const LINKS_KEY = JsonDataSchemaInterface::JSONAPI_LINKS;
+  const SELF_KEY = JsonDataSchemaInterface::JSONAPI_SELF;
+
+  const TYPE_OUNIT = OccapiTempStoreInterface::TYPE_OUNIT;
+  const TYPE_PROGRAMME = OccapiTempStoreInterface::TYPE_PROGRAMME;
+  const TYPE_COURSE = OccapiTempStoreInterface::TYPE_COURSE;
+
   /**
    * OCCAPI Institution resource.
    *
@@ -29,25 +38,25 @@ class OccapiProviderPreviewForm extends EntityForm {
   protected $heiResource;
 
   /**
-  * Data formatter service.
+  * The data formatter.
   *
   * @var \Drupal\occapi_client\DataFormatter
   */
   protected $dataFormatter;
 
   /**
-   * JSON data processor service.
-   *
-   * @var \Drupal\occapi_client\JsonDataProcessor
-   */
-  protected $jsonDataProcessor;
+  * The data loader.
+  *
+  * @var \Drupal\occapi_client\OccapiDataLoaderInterface
+  */
+  protected $dataLoader;
 
   /**
-   * The logger service.
+   * The JSON data processor.
    *
-   * @var \Psr\Log\LoggerInterface
+   * @var \Drupal\occapi_client\JsonDataProcessorInterface
    */
-  protected $logger;
+  protected $jsonDataProcessor;
 
   /**
    * The messenger service.
@@ -57,24 +66,15 @@ class OccapiProviderPreviewForm extends EntityForm {
   protected $messenger;
 
   /**
-   * OCCAPI provider manager service.
-   *
-   * @var \Drupal\occapi_client\OccapiProviderManager
-   */
-  protected $providerManager;
-
-  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
     // Instantiates this form class.
     $instance = parent::create($container);
     $instance->dataFormatter        = $container->get('occapi_client.format');
+    $instance->dataLoader           = $container->get('occapi_client.load');
     $instance->jsonDataProcessor    = $container->get('occapi_client.json');
-    $instance->loggerFactory        = $container->get('logger.factory');
-    $instance->logger = $instance->loggerFactory->get('occapi_client');
     $instance->messenger            = $container->get('messenger');
-    $instance->providerManager      = $container->get('occapi_client.manager');
     return $instance;
   }
 
@@ -87,11 +87,9 @@ class OccapiProviderPreviewForm extends EntityForm {
     $provider_id  = $this->entity->id();
     $ounit_filter = $this->entity->get('ounit_filter');
 
-    $header_markup = '<h2>' . $this->entity->label() . '</h2>';
-
     $form['header'] = [
       '#type' => 'markup',
-      '#markup' => $header_markup,
+      '#markup' => '<h2>' . $this->entity->label() . '</h2>',
     ];
 
     // Primary tabs for automatic data requests.
@@ -101,24 +99,19 @@ class OccapiProviderPreviewForm extends EntityForm {
     ];
 
     // Prepare Institution data.
-    $this->heiResource = $this->providerManager
-      ->loadInstitution($provider_id);
+    $this->heiResource = $this->dataLoader->loadInstitution($provider_id);
 
     if (empty($this->heiResource)) {
       $this->messenger->addError($this->t('No available data!'));
       return $form;
     }
 
-    $hei_json = \json_encode(
-      $this->heiResource[Json::DATA_KEY],
-      JSON_PRETTY_PRINT
-    );
-
-    $hei_table = $this->dataFormatter
-      ->resourceTable($this->heiResource);
-
+    $hei_data = $this->heiResource[self::DATA_KEY];
+    $hei_json = \json_encode($hei_data, JSON_PRETTY_PRINT);
+    $hei_links = $this->heiResource[self::LINKS_KEY];
+    $hei_table = $this->dataFormatter->resourceTable($this->heiResource);
     $hei_endpoint = $this->jsonDataProcessor
-      ->getLink($this->heiResource, Json::SELF_KEY);
+      ->getResourceLinkByType($this->heiResource, self::SELF_KEY);
 
     $hei_markup = '<p><code>GET ' . $hei_endpoint . '</code></p>';
     $hei_markup .= $hei_table;
@@ -146,26 +139,14 @@ class OccapiProviderPreviewForm extends EntityForm {
       '#markup' => '<pre>' . $hei_json . '</pre>',
     ];
 
-    if (
-      array_key_exists(
-        Manager::OUNIT_KEY,
-        $this->heiResource[Json::LINKS_KEY]
-      )
-    ) {
+    if (array_key_exists(self::TYPE_OUNIT, $hei_links)) {
       // Prepare Organizational Unit data.
-      $ounit_data = $this->providerManager
-        ->loadOunits($provider_id);
-
-      $ounit_json = \json_encode(
-        $ounit_data[Json::DATA_KEY],
-        JSON_PRETTY_PRINT
-      );
-
-      $ounit_table = $this->dataFormatter
-        ->collectionTable($ounit_data);
-
+      $ounit_collection = $this->dataLoader->loadOunits($provider_id);
+      $ounit_data = $ounit_collection[self::DATA_KEY];
+      $ounit_json = \json_encode($ounit_data, JSON_PRETTY_PRINT);
+      $ounit_table = $this->dataFormatter->collectionTable($ounit_collection);
       $ounit_endpoint = $this->jsonDataProcessor
-        ->getLink($this->heiResource, Manager::OUNIT_KEY);
+        ->getResourceLinkByType($this->heiResource, self::TYPE_OUNIT);
 
       $ounit_markup = '<p><code>GET ' . $ounit_endpoint . '</code></p>';
       $ounit_markup .= $ounit_table;
@@ -194,27 +175,15 @@ class OccapiProviderPreviewForm extends EntityForm {
       ];
     }
 
-    if (
-      ! $ounit_filter &&
-      array_key_exists(
-        Manager::PROGRAMME_KEY,
-        $this->heiResource[Json::LINKS_KEY]
-      )
-    ) {
+    if (!$ounit_filter && array_key_exists(self::TYPE_PROGRAMME, $hei_links)) {
       // Prepare Programme data.
-      $programme_data = $this->providerManager
-        ->loadProgrammes($provider_id);
-
-      $programme_json = \json_encode(
-        $programme_data[Json::DATA_KEY],
-        JSON_PRETTY_PRINT
-      );
-
+      $programme_collection = $this->dataLoader->loadProgrammes($provider_id);
+      $programme_data = $programme_collection[self::DATA_KEY];
+      $programme_json = \json_encode($programme_data,JSON_PRETTY_PRINT);
       $programme_table = $this->dataFormatter
-        ->collectionTable($programme_data);
-
+        ->collectionTable($programme_collection);
       $programme_endpoint = $this->jsonDataProcessor
-        ->getLink($this->heiResource, Manager::PROGRAMME_KEY);
+        ->getResourceLinkByType($this->heiResource, self::TYPE_PROGRAMME);
 
       $programme_markup = '<p><code>GET ' . $programme_endpoint . '</code></p>';
       $programme_markup .= $programme_table;
@@ -243,26 +212,14 @@ class OccapiProviderPreviewForm extends EntityForm {
       ];
     }
 
-    if (
-      ! $ounit_filter &&
-      array_key_exists(
-        Manager::COURSE_KEY,
-        $this->heiResource[Json::LINKS_KEY]
-      )
-    ) {
+    if (!$ounit_filter && array_key_exists(self::TYPE_COURSE, $hei_links)) {
       // Prepare Course data.
-      $course_data = $this->providerManager
-        ->loadCourses($provider_id);
-
-      $course_json = \json_encode(
-        $course_data[Json::DATA_KEY],
-        JSON_PRETTY_PRINT
-      );
-      $course_table = $this->dataFormatter
-        ->collectionTable($course_data);
-
+      $course_collection = $this->dataLoader->loadCourses($provider_id);
+      $course_data = $course_collection[self::DATA_KEY];
+      $course_json = \json_encode($course_data, JSON_PRETTY_PRINT);
+      $course_table = $this->dataFormatter->collectionTable($course_collection);
       $course_endpoint = $this->jsonDataProcessor
-        ->getLink($this->heiResource, Manager::COURSE_KEY);
+        ->getResourceLinkByType($this->heiResource, self::TYPE_COURSE);
 
       $course_markup = '<p><code>GET ' . $course_endpoint . '</code></p>';
       $course_markup .= $course_table;
@@ -297,17 +254,11 @@ class OccapiProviderPreviewForm extends EntityForm {
       '#title' => $this->t('Secondary data'),
     ];
 
-    if (
-      array_key_exists(
-        Manager::OUNIT_KEY,
-        $this->heiResource[Json::LINKS_KEY]
-      )
-    ) {
+    if (array_key_exists(self::TYPE_OUNIT, $hei_links)) {
       $ounit_titles = $this->jsonDataProcessor
-        ->getTitles($ounit_data);
-
+        ->getResourceTitles($ounit_collection);
       $ounit_links = $this->jsonDataProcessor
-        ->getLinks($ounit_data);
+        ->getResourceLinks($ounit_collection);
 
       // Select ounit to display programme data.
       $form['ounit_programme_wrapper'] = [
@@ -375,18 +326,11 @@ class OccapiProviderPreviewForm extends EntityForm {
       ];
     }
 
-    if (
-      ! $ounit_filter &&
-      array_key_exists(
-        Manager::PROGRAMME_KEY,
-        $this->heiResource[Json::LINKS_KEY]
-      )
-    ) {
+    if (!$ounit_filter && array_key_exists(self::TYPE_PROGRAMME, $hei_links)) {
       $programme_titles = $this->jsonDataProcessor
-        ->getTitles($programme_data);
-
+        ->getResourceTitles($programme_collection);
       $programme_links = $this->jsonDataProcessor
-        ->getLinks($programme_data);
+        ->getResourceLinks($programme_collection);
 
       // Select programme to display course data.
       $form['programme_course_wrapper'] = [
@@ -454,35 +398,26 @@ class OccapiProviderPreviewForm extends EntityForm {
 
     if ($ounit_id) {
       // OUnit resource data.
-      $ounit_data = $this->providerManager
+      $ounit_data = $this->dataLoader
         ->loadOunit($this->entity->id(), $ounit_id);
-
-      $ounit_table = $this->dataFormatter
-        ->resourceTable($ounit_data);
-
+      $ounit_links = $ounit_data[self::LINKS_KEY];
+      $ounit_table = $this->dataFormatter->resourceTable($ounit_data);
       $ounit_endpoint = $this->jsonDataProcessor
-        ->getLink($this->heiResource, Manager::OUNIT_KEY);
+        ->getResourceLinkByType($this->heiResource, self::TYPE_OUNIT);
 
       $ounit_markup = '<p><code>GET ' . $ounit_endpoint . '</code></p>';
       $ounit_markup .= $ounit_table;
 
       $markup .= $ounit_markup;
 
-      if (
-        array_key_exists(
-          Manager::PROGRAMME_KEY,
-          $ounit_data[Json::LINKS_KEY]
-        )
-      ) {
+      if (array_key_exists(self::TYPE_PROGRAMME, $ounit_links)) {
         // Programme collection data.
-        $programme_data = $this->providerManager
+        $programme_collection = $this->dataLoader
           ->loadOunitProgrammes($this->entity->id(), $ounit_id);
-
         $programme_table = $this->dataFormatter
-          ->collectionTable($programme_data);
-
+          ->collectionTable($programme_collection);
         $programme_endpoint = $this->jsonDataProcessor
-          ->getLink($this->heiResource, Manager::PROGRAMME_KEY);
+          ->getResourceLinkByType($this->heiResource, self::TYPE_PROGRAMME);
 
         $programme_markup = '<p><code>GET ' . $programme_endpoint . '</code></p>';
         $programme_markup .= $programme_table;
@@ -507,35 +442,26 @@ class OccapiProviderPreviewForm extends EntityForm {
 
     if ($ounit_id) {
       // OUnit resource data.
-      $ounit_data = $this->providerManager
+      $ounit_data = $this->dataLoader
         ->loadOunit($this->entity->id(), $ounit_id);
-
-      $ounit_table = $this->dataFormatter
-        ->resourceTable($ounit_data);
-
+      $ounit_links = $ounit_data[self::LINKS_KEY];
+      $ounit_table = $this->dataFormatter->resourceTable($ounit_data);
       $ounit_endpoint = $this->jsonDataProcessor
-        ->getLink($this->heiResource, Manager::OUNIT_KEY);
+        ->getResourceLinkByType($this->heiResource, self::TYPE_OUNIT);
 
       $ounit_markup = '<p><code>GET ' . $ounit_endpoint . '</code></p>';
       $ounit_markup .= $ounit_table;
 
       $markup .= $ounit_markup;
 
-      if (
-        array_key_exists(
-          Manager::COURSE_KEY,
-          $ounit_data[Json::LINKS_KEY]
-        )
-      ) {
+      if (array_key_exists(self::TYPE_COURSE, $ounit_links)) {
         // Course collection data.
-        $course_data = $this->providerManager
+        $course_collection = $this->dataLoader
           ->loadOunitCourses($this->entity->id(), $ounit_id);
-
         $course_table = $this->dataFormatter
-          ->collectionTable($course_data);
-
+          ->collectionTable($course_collection);
         $course_endpoint = $this->jsonDataProcessor
-          ->getLink($this->heiResource, Manager::COURSE_KEY);
+          ->getResourceLinkByType($this->heiResource, self::TYPE_COURSE);
 
         $course_markup = '<p><code>GET ' . $course_endpoint . '</code></p>';
         $course_markup .= $course_table;
@@ -559,35 +485,27 @@ class OccapiProviderPreviewForm extends EntityForm {
     $programme_id = $form_state->getValue('programme_course_select');
 
     if ($programme_id) {
-      $programme_data = $this->providerManager
+      // Programme resource data.
+      $programme_data = $this->dataLoader
         ->loadProgramme($this->entity->id(), $programme_id);
-
-      $programme_table = $this->dataFormatter
-        ->resourceTable($programme_data);
-
+      $programme_links = $programme_data[self::LINKS_KEY];
+      $programme_table = $this->dataFormatter->resourceTable($programme_data);
       $programme_endpoint = $this->jsonDataProcessor
-        ->getLink($this->heiResource, Manager::PROGRAMME_KEY);
+        ->getResourceLinkByType($this->heiResource, self::TYPE_PROGRAMME);
 
       $programme_markup = '<p><code>GET ' . $programme_endpoint . '</code></p>';
       $programme_markup .= $programme_table;
 
       $markup .= $programme_markup;
 
-      if (
-        array_key_exists(
-          Manager::COURSE_KEY,
-          $programme_data[Json::LINKS_KEY]
-        )
-      ) {
+      if (array_key_exists(self::TYPE_COURSE, $programme_links)) {
         // Course collection data.
-        $course_data = $this->providerManager
+        $course_collection = $this->dataLoader
           ->loadProgrammeCourses($this->entity->id(), $programme_id);
-
         $course_table = $this->dataFormatter
-          ->collectionTable($course_data);
-
+          ->collectionTable($course_collection);
         $course_endpoint = $this->jsonDataProcessor
-          ->getLink($this->heiResource, Manager::COURSE_KEY);
+          ->getResourceLinkByType($this->heiResource, self::TYPE_COURSE);
 
         $course_markup = '<p><code>GET ' . $course_endpoint . '</code></p>';
         $course_markup .= $course_table;

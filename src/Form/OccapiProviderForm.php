@@ -4,8 +4,7 @@ namespace Drupal\occapi_client\Form;
 
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\occapi_client\JsonDataFetcher;
-use Drupal\occapi_client\OccapiProviderManager as Manager;
+use Drupal\occapi_client\JsonDataFetcherInterface;
 use Drupal\occapi_client\OccapiTempStoreInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -16,7 +15,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 class OccapiProviderForm extends EntityForm {
 
-  const JSONAPI_TYPE_HEI = OccapiTempStoreInterface::JSONAPI_TYPE_HEI;
+  const TYPE_HEI = OccapiTempStoreInterface::TYPE_HEI;
 
   const PARAM_PROVIDER = OccapiTempStoreInterface::PARAM_PROVIDER;
   const PARAM_FILTER_TYPE = OccapiTempStoreInterface::PARAM_FILTER_TYPE;
@@ -26,14 +25,14 @@ class OccapiProviderForm extends EntityForm {
 
 
   /**
-   * JSON data fetcher service.
+   * the JSON data fetcher.
    *
-   * @var \Drupal\occapi_client\JsonDataFetcher
+   * @var \Drupal\occapi_client\JsonDataFetcherInterface
    */
   protected $jsonDataFetcher;
 
   /**
-   * Shared TempStore manager.
+   * The shared TempStore key manager.
    *
    * @var \Drupal\occapi_client\OccapiTempStoreInterface
    */
@@ -105,7 +104,7 @@ class OccapiProviderForm extends EntityForm {
       '#type' => 'textfield',
       '#title' => $this->t('Base URL'),
       '#maxlength' => 255,
-      '#default_value' => $this->entity->get('base_url'),
+      '#default_value' => $this->entity->baseUrl(),
       '#description' => $description . '<br />' . $this->t('Format: %format', [
         '%format' => 'https://example.com/occapi/v1/hei/domain.tld'
       ]),
@@ -151,8 +150,7 @@ class OccapiProviderForm extends EntityForm {
   public function validateForm(array &$form, FormStateInterface $form_state) {
     $endpoint = $form_state->getValue('base_url');
 
-    $code = $this->jsonDataFetcher
-      ->getResponseCode($endpoint);
+    $code = $this->jsonDataFetcher->getResponseCode($endpoint);
 
     if ($code !== 200) {
       $message = $this->t('Failed to fetch Institution data from %endpoint.', [
@@ -177,7 +175,7 @@ class OccapiProviderForm extends EntityForm {
         self::PARAM_PROVIDER => $provider_id,
         self::PARAM_FILTER_TYPE => NULL,
         self::PARAM_FILTER_ID => NULL,
-        self::PARAM_RESOURCE_TYPE => self::JSONAPI_TYPE_HEI,
+        self::PARAM_RESOURCE_TYPE => self::TYPE_HEI,
         self::PARAM_RESOURCE_ID => $hei_id,
       ];
 

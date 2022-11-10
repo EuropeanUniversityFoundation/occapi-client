@@ -1,7 +1,7 @@
 services:
   occapi_client.fetch:
     class: Drupal\occapi_client\JsonDataFetcher
-    arguments: ['@http_client', '@logger.factory', '@module_handler', '@tempstore.shared', '@string_translation']
+    arguments: ['@http_client', '@logger.factory', '@module_handler', '@occapi_client.manager', '@tempstore.shared', '@string_translation']
 
   occapi_client.field_manager:
     class: Drupal\occapi_client\OccapiFieldManager
@@ -13,16 +13,20 @@ services:
 
   occapi_client.json:
     class: Drupal\occapi_client\JsonDataProcessor
-    arguments: ['@logger.factory', '@string_translation']
+    arguments: []
+
+  occapi_client.load:
+    class: Drupal\occapi_client\OccapiDataLoader
+    arguments: ['@occapi_client.fetch', '@occapi_client.json', '@occapi_client.manager', '@occapi_client.tempstore']
 
   occapi_client.manager:
     class: Drupal\occapi_client\OccapiProviderManager
-    arguments: ['@config.factory', '@occapi_client.format', '@entity_type.manager', '@occapi_client.fetch', '@occapi_client.json', '@logger.factory', '@string_translation']
-
-  occapi_client.tempstore:
-    class: Drupal\occapi_client\OccapiTempStore
-    arguments: ['@tempstore.shared', '@string_translation']
+    arguments: ['@entity_type.manager', '@occapi_client.tempstore']
 
   occapi_client.relationships:
     class: Drupal\occapi_client\OccapiRelationships
-    arguments: ['@occapi_client.tempstore']
+    arguments: ['@occapi_client.tempstore', '@string_translation']
+
+  occapi_client.tempstore:
+    class: Drupal\occapi_client\OccapiTempStore
+    arguments: ['@string_translation']

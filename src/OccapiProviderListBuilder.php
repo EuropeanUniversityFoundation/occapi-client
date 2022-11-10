@@ -30,7 +30,7 @@ class OccapiProviderListBuilder extends ConfigEntityListBuilder {
     /** @var \Drupal\occapi_client\OccapiProviderInterface $entity */
     $row['label'] = $entity->label();
     $row['id'] = $entity->id();
-    $row['base_url'] = $entity->get('base_url');
+    $row['base_url'] = $entity->baseUrl();
     $row['hei_id'] = $entity->get('hei_id');
     $row['ounit_filter'] = $entity->get('ounit_filter') ? $this->t('Yes') : $this->t('No');
     $row['status'] = $entity->status() ? $this->t('Enabled') : $this->t('Disabled');

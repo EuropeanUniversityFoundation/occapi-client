@@ -2,65 +2,54 @@
 
 namespace Drupal\occapi_client;
 
-use Drupal\Core\Logger\LoggerChannelFactoryInterface;
-use Drupal\Core\StringTranslation\StringTranslationTrait;
-use Drupal\Core\StringTranslation\TranslationInterface;
-
 /**
- * JSON data processing service.
+ * Service for processing JSON data.
  */
-class JsonDataProcessor {
-
-  use StringTranslationTrait;
+class JsonDataProcessor implements JsonDataProcessorInterface {
 
   // JSON:API primary keys.
-  const DATA_KEY  = 'data';
-  const INC_KEY   = 'included';
-  const LINKS_KEY = 'links';
+  const DATA_KEY  = JsonDataSchemaInterface::JSONAPI_DATA;
+  const INC_KEY   = JsonDataSchemaInterface::JSONAPI_INC;
+  const LINKS_KEY = JsonDataSchemaInterface::JSONAPI_LINKS;
 
   // JSON:API data keys.
-  const TYPE_KEY  = 'type';
-  const ID_KEY    = 'id';
-  const ATTR_KEY  = 'attributes';
-  const REL_KEY   = 'relationships';
-  const META_KEY  = 'meta';
+  const TYPE_KEY  = JsonDataSchemaInterface::JSONAPI_TYPE;
+  const ID_KEY    = JsonDataSchemaInterface::JSONAPI_ID;
+  const ATTR_KEY  = JsonDataSchemaInterface::JSONAPI_ATTR;
+  const REL_KEY   = JsonDataSchemaInterface::JSONAPI_REL;
+  const META_KEY  = JsonDataSchemaInterface::JSONAPI_META;
 
-  // OCCAPI title field.
-  const TITLE_KEY = 'title';
+  // JSON:API link keys.
+  const SELF_KEY  = JsonDataSchemaInterface::JSONAPI_SELF;
+  const HREF_KEY  = JsonDataSchemaInterface::JSONAPI_HREF;
+
+  // Drupal specific keys.
+  const LABEL_KEY = 'label';
+
+  // EWP compound field keys.
   const STR_KEY   = 'string';
   const MLSTR_KEY = 'multiline';
   const URI_KEY   = 'uri';
   const LANG_KEY  = 'lang';
+
+  const TITLE_KEY = 'title';
   const LANG_PREF = 'en';
 
-  // JSON:API link keys.
-  const SELF_KEY  = 'self';
-  const HREF_KEY  = 'href';
-
-  // Drupal array keys
-  const LABEL_KEY = 'label';
-
   /**
-   * The logger service.
+   * Get the data from a resource.
    *
-   * @var \Psr\Log\LoggerInterface
+   * @param array $resource
+   *   An array containing a JSON:API resource.
+   *
+   * @return array
+   *   The actual data of the JSON:API resource.
    */
-  protected $logger;
+  public function getResourceData(array $resource): array {
+    $data = (\array_key_exists(self::DATA_KEY, $resource))
+      ? $resource[self::DATA_KEY]
+      : $resource;
 
-  /**
-   * Constructs a new JsonDataProcessor.
-   *
-   * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $logger_factory
-   *   The logger factory service.
-   * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
-   *   The string translation service.
-   */
-  public function __construct(
-    LoggerChannelFactoryInterface $logger_factory,
-    TranslationInterface $string_translation
-  ) {
-    $this->logger             = $logger_factory->get('occapi_client');
-    $this->stringTranslation  = $string_translation;
+    return $data;
   }
 
   /**
@@ -69,17 +58,13 @@ class JsonDataProcessor {
    * @param array $resource
    *   An array containing a JSON:API resource data.
    *
-   * @return string $type
+   * @return string
    *   The type of the JSON:API resource.
    */
-  public function getType(array $resource): string {
-    $data = (\array_key_exists(self::DATA_KEY, $resource)) ?
-      $resource[self::DATA_KEY] :
-      $resource;
+  public function getResourceType(array $resource): string {
+    $data = $this->getResourceData($resource);
 
-    $type = $data[self::TYPE_KEY];
-
-    return $type;
+    return $data[self::TYPE_KEY];
   }
 
   /**
@@ -88,17 +73,13 @@ class JsonDataProcessor {
    * @param array $resource
    *   An array containing a JSON:API resource data.
    *
-   * @return string $id
-   *   The id of the JSON:API resource.
+   * @return string
+   *   The ID of the JSON:API resource.
    */
-  public function getId(array $resource): string {
-    $data = (\array_key_exists(self::DATA_KEY, $resource)) ?
-      $resource[self::DATA_KEY] :
-      $resource;
+  public function getResourceId(array $resource): string {
+    $data = $this->getResourceData($resource);
 
-    $id = $data[self::ID_KEY];
-
-    return $id;
+    return $data[self::ID_KEY];
   }
 
   /**
@@ -107,55 +88,36 @@ class JsonDataProcessor {
   * @param array $resource
   *   An array containing a JSON:API resource data.
   *
-  * @return string $title
-  *   The title attribute of the JSON:API resource.
+  * @return string
+  *   The title of the JSON:API resource.
   */
-  public function getTitle(array $resource): string {
+  public function getResourceTitle(array $resource): string {
     $title = '';
 
-    $data = (\array_key_exists(self::DATA_KEY, $resource)) ?
-      $resource[self::DATA_KEY] :
-      $resource;
+    $data = $this->getResourceData($resource);
+    $data_attributes = $data[self::ATTR_KEY] ?? [];
 
-    // Priority to Drupal entity labels.
-    if (
-      \array_key_exists(self::ATTR_KEY, $data) &&
-      \array_key_exists(self::LABEL_KEY, $data[self::ATTR_KEY])
-    ) {
-      return $data[self::ATTR_KEY][self::LABEL_KEY];
+    // If there are no attributes, return the empty title.
+    if (empty($data_attributes)) {
+      return $title;
     }
 
-    if (
-      \array_key_exists(self::ATTR_KEY, $data) &&
-      \array_key_exists(self::TITLE_KEY, $data[self::ATTR_KEY])
-    ) {
+    // If found, use Drupal entity label as title.
+    if (!empty($data_attributes[self::LABEL_KEY] ?? '')) {
+      return $data_attributes[self::LABEL_KEY];
+    }
+
+    $title_attribute = $data_attributes[self::TITLE_KEY] ?? [];
+
+    if (!empty($title_attribute)) {
       // Enforce an array of title objects.
-      if (! \array_key_exists(0, $data[self::ATTR_KEY][self::TITLE_KEY])) {
-        $title_array = [$data[self::ATTR_KEY][self::TITLE_KEY]];
-      } else {
-        $title_array = $data[self::ATTR_KEY][self::TITLE_KEY];
-      }
+      $title_items = (! \array_key_exists(0, $title_attribute))
+        ? [$title_attribute]
+        : $title_attribute;
 
-      // Sort the title objects by prefered lang value.
-      $title_primary = [];
-      $title_fallback = [];
-      $title_ordered = [];
+      $title_ordered = $this->sortByLang($title_items);
 
-      foreach ($title_array as $i => $arr) {
-        if (
-          \array_key_exists(self::LANG_KEY, $arr) &&
-          $arr[self::LANG_KEY] === self::LANG_PREF
-        ) {
-          \array_push($title_primary, $arr);
-        } else {
-          \array_push($title_fallback, $arr);
-        }
-        $title_ordered = \array_merge($title_primary, $title_fallback);
-      }
-
-      if (count($title_ordered) > 0) {
-        $title = $title_ordered[0][self::STR_KEY];
-      }
+      $title = $title_ordered[0][self::STR_KEY] ?? '';
     }
 
     return $title;
@@ -169,24 +131,19 @@ class JsonDataProcessor {
    * @param string $attribute
    *   The key to a JSON:API resource attribute.
    *
-   * @return array $result
+   * @return array
    *   The value of the attribute keyed by attribute name.
    */
-  public function getAttribute(array $resource, string $attribute): array {
-    $result = [];
+  public function getResourceAttribute(array $resource, string $attribute): array {
+    $data = $this->getResourceData($resource);
 
-    $data = (\array_key_exists(self::DATA_KEY, $resource)) ?
-      $resource[self::DATA_KEY] :
-      $resource;
+    $data_attributes = $data[self::ATTR_KEY] ?? [];
 
-    if (
-      \array_key_exists(self::ATTR_KEY, $data) &&
-      \array_key_exists($attribute, $data[self::ATTR_KEY])
-    ) {
-      $result[$attribute] = $data[self::ATTR_KEY][$attribute];
+    if (\array_key_exists($attribute, $data_attributes)) {
+      return [$attribute => $data_attributes[$attribute]];
     }
 
-    return $result;
+    return [];
   }
 
   /**
@@ -197,27 +154,22 @@ class JsonDataProcessor {
    * @param string $link_type
    *   The JSON:API link type key to extract.
    *
-   * @return string $link
+   * @return string
    *   The URL of the JSON:API link.
    */
-  public function getLink(array $resource, string $link_type): string {
+  public function getResourceLinkByType(array $resource, string $link_type): string {
     $link = '';
 
-    if (
-      \array_key_exists(self::LINKS_KEY, $resource) &&
-      \array_key_exists($link_type, $resource[self::LINKS_KEY])
-    ) {
-      $link = $resource[self::LINKS_KEY][$link_type][self::HREF_KEY];
+    $data_links = $resource[self::DATA_KEY][self::LINKS_KEY] ?? [];
+
+    if (!empty($data_links) && $link_type === self::SELF_KEY) {
+      $link = $data_links[$link_type][self::HREF_KEY] ?? '';
     }
 
-    if (
-      $link_type === self::SELF_KEY &&
-      \array_key_exists(self::DATA_KEY, $resource) &&
-      \array_key_exists(self::LINKS_KEY, $resource[self::DATA_KEY])
-    ) {
-      // Data links should take precedence over resource links.
-      $data = $resource[self::DATA_KEY];
-      $link = $data[self::LINKS_KEY][$link_type][self::HREF_KEY];
+    $resource_links = $resource[self::LINKS_KEY] ?? [];
+
+    if (empty($link) && \array_key_exists($link_type, $resource_links)) {
+      $link = $resource_links[$link_type][self::HREF_KEY] ?? '';
     }
 
     return $link;
@@ -229,23 +181,20 @@ class JsonDataProcessor {
    * @param array $collection
    *   An array containing a JSON:API resource collection.
    *
-   * @return array $titles
+   * @return array
    *   An array of resource titles keyed by resource ID.
    */
-  public function getTitles(array $collection): array {
+  public function getResourceTitles(array $collection): array {
     $titles = [];
 
     $data = $collection[self::DATA_KEY];
 
-    foreach ($data as $i => $resource) {
-      $id = $this->getId($resource);
-
-      $title = $this->getTitle($resource);
+    foreach ($data as $resource) {
+      $id = $this->getResourceId($resource);
+      $title = $this->getResourceTitle($resource);
 
       // Use ID as fallback for missing title.
-      $title = ($title) ? $title : $id;
-
-      $titles[$id] = $title;
+      $titles[$id] = ($title) ? $title : $id;
     }
 
     return $titles;
@@ -257,23 +206,49 @@ class JsonDataProcessor {
    * @param array $collection
    *   An array containing a JSON:API resource collection.
    *
-   * @return array $links
+   * @return array
    *   An array of resource 'self' links keyed by resource ID.
    */
-  public function getLinks(array $collection): array {
+  public function getResourceLinks(array $collection): array {
     $links = [];
 
     $data = $collection[self::DATA_KEY];
 
-    foreach ($data as $i => $resource) {
-      $id = $this->getId($resource);
-
-      $uri = $this->getLink($resource, self::SELF_KEY);
+    foreach ($data as $resource) {
+      $id = $this->getResourceId($resource);
+      $uri = $this->getResourceLinkByType($resource, self::SELF_KEY);
 
       $links[$id] = $uri;
     }
 
     return $links;
+  }
+
+  /**
+   * Sort language typed data by preferred language.
+   *
+   * @param array $language_typed_data
+   *   An array containing language typed data.
+   *
+   * @return array
+   *   The sorted data.
+   */
+  public function sortByLang(array $language_typed_data): array {
+    $preferred = [];
+    $remaining = [];
+
+    foreach ($language_typed_data as $item) {
+      $item_lang = $item[self::LANG_KEY] ?? NULL;
+
+      if ($item_lang === self::LANG_PREF) {
+        \array_push($preferred, $item);
+      }
+      else {
+        \array_push($remaining, $item);
+      }
+    }
+
+    return \array_merge($preferred, $remaining);
   }
 
 }

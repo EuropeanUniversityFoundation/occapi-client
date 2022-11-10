@@ -4,27 +4,31 @@ namespace Drupal\occapi_client;
 
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\occapi_client\OccapiTempStoreInterface;
 
 /**
- * Service description.
+ * Service for managing OCCAPI resource relationships.
  */
-class OccapiRelationships {
+class OccapiRelationships implements OccapiRelationshipsInterface {
 
   use StringTranslationTrait;
 
+  const DATA_KEY = JsonDataSchemaInterface::JSONAPI_DATA;
+  const REL_KEY = JsonDataSchemaInterface::JSONAPI_REL;
+  const TYPE_KEY = JsonDataSchemaInterface::JSONAPI_TYPE;
+  const ID_KEY = JsonDataSchemaInterface::JSONAPI_ID;
+
   /**
-   * Shared TempStore manager.
+   * The shared TempStore key manager.
    *
    * @var \Drupal\occapi_client\OccapiTempStoreInterface
    */
   protected $occapiTempStore;
 
   /**
-   * Constructs an OccapiRelationships object.
+   * The constructor.
    *
    * @param \Drupal\occapi_client\OccapiTempStoreInterface $occapi_tempstore
-   *   Shared TempStore manager
+   *   The shared TempStore key manager.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
    */
@@ -95,18 +99,18 @@ class OccapiRelationships {
    *   The altered data item.
    */
   public function add(array $item, string $type, string $id): array {
-    if (!\array_key_exists('data', $item)) {
+    if (!\array_key_exists(self::DATA_KEY, $item)) {
       return $item;
     }
 
-    if (!\array_key_exists('relationships', $item['data'])) {
-      $item['data']['relationships'] = [];
+    if (!\array_key_exists(self::REL_KEY, $item[self::DATA_KEY])) {
+      $item[self::DATA_KEY][self::REL_KEY] = [];
     }
 
     $exists = FALSE;
 
-    foreach ($item['data']['relationships'] as $rel) {
-      if ($rel['type'] === $type && $rel['id'] === $id) {
+    foreach ($item[self::DATA_KEY][self::REL_KEY] as $rel) {
+      if ($rel[self::TYPE_KEY] === $type && $rel[self::ID_KEY] === $id) {
         $exists = TRUE;
       }
 
@@ -114,9 +118,9 @@ class OccapiRelationships {
     }
 
     if (!$exists) {
-      $item['data']['relationships'][] = [
-        'type' => $type,
-        'id' => $id,
+      $item[self::DATA_KEY][self::REL_KEY][] = [
+        self::TYPE_KEY => $type,
+        self::ID_KEY => $id,
       ];
     }
 

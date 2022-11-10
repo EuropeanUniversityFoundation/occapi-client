@@ -112,4 +112,14 @@ class OccapiProvider extends ConfigEntityBase implements OccapiProviderInterface
     return $this->get('hei_id');
   }
 
+  /**
+   * Returns the base URL.
+   *
+   * @return string|null
+   *   The base URL if it exists, or NULL otherwise.
+   */
+  public function baseUrl(): ?string {
+    return $this->get('base_url');
+  }
+
 }

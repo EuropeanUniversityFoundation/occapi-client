@@ -4,35 +4,23 @@ namespace Drupal\occapi_client;
 
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\Core\TempStore\SharedTempStoreFactory;
 
 /**
- * Shared TempStore manager.
+ * Service for managing shared TempStore keys.
  */
 class OccapiTempStore implements OccapiTempStoreInterface {
 
   use StringTranslationTrait;
 
   /**
-   * An instance of the key/value store.
+   * The constructor.
    *
-   * @var \Drupal\Core\TempStore\SharedTempStore
-   */
-  protected $tempStore;
-
-  /**
-   * Constructs an OccapiTempStore object.
-   *
-   * @param \Drupal\Core\TempStore\SharedTempStoreFactory $temp_store_factory
-   *   The factory for the temp store object.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
    */
   public function __construct(
-    SharedTempStoreFactory $temp_store_factory,
     TranslationInterface $string_translation
   ) {
-    $this->tempStore         = $temp_store_factory->get('occapi_client');
     $this->stringTranslation = $string_translation;
   }
 
@@ -49,7 +37,7 @@ class OccapiTempStore implements OccapiTempStoreInterface {
     // Handle the Institution scenario first: ID main contain separator.
     $parts = \explode(self::TEMPSTORE_KEY_SEPARATOR, $temp_store_key, 3);
 
-    if ($parts[1] === self::JSONAPI_TYPE_HEI) {
+    if ($parts[1] === self::TYPE_HEI) {
       $temp_store_params = [
         self::PARAM_PROVIDER => $parts[0],
         self::PARAM_FILTER_TYPE => NULL,
@@ -155,6 +143,7 @@ class OccapiTempStore implements OccapiTempStoreInterface {
       return $this->t('Filter ID provided, missing filter type.');
     }
 
+    // No errors found.
     return NULL;
   }
 
@@ -183,8 +172,8 @@ class OccapiTempStore implements OccapiTempStoreInterface {
     // Validate the resource type.
     if (!empty($resource_type)) {
       $allowed_types = [
-        self::JSONAPI_TYPE_PROGRAMME,
-        self::JSONAPI_TYPE_COURSE,
+        self::TYPE_PROGRAMME,
+        self::TYPE_COURSE,
       ];
 
       $error = $this->validateTempstoreType($resource_type, $allowed_types);
@@ -204,8 +193,8 @@ class OccapiTempStore implements OccapiTempStoreInterface {
     // Validate the filter type.
     if (!empty($filter_type)) {
       $allowed_types = [
-        self::JSONAPI_TYPE_OUNIT,
-        self::JSONAPI_TYPE_PROGRAMME
+        self::TYPE_OUNIT,
+        self::TYPE_PROGRAMME
       ];
 
       $error = $this->validateResourceType($filter_type, $allowed_types);
@@ -247,8 +236,8 @@ class OccapiTempStore implements OccapiTempStoreInterface {
     // Validate the resource type.
     if (!empty($resource_type)) {
       $allowed_types = [
-        self::JSONAPI_TYPE_PROGRAMME,
-        self::JSONAPI_TYPE_COURSE,
+        self::TYPE_PROGRAMME,
+        self::TYPE_COURSE,
       ];
 
       $error = $this->validateTempstoreType($resource_type, $allowed_types);
@@ -290,23 +279,6 @@ class OccapiTempStore implements OccapiTempStoreInterface {
 
     // No errors found.
     return NULL;
-  }
-
-  /**
-   * Check the TempStore for the updated date.
-   *
-   * @param string $temp_store_key
-   *   The TempStore key.
-   *
-   * @return int|null
-   *   A UNIX timestamp or NULL.
-   */
-  public function checkUpdated(string $temp_store_key): ?int {
-    if (!empty($this->tempStore->get($temp_store_key))) {
-      return $this->tempStore->getMetadata($temp_store_key)->getUpdated();
-    } else {
-      return NULL;
-    }
   }
 
 }

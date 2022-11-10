@@ -10,33 +10,33 @@ use Drupal\occapi_client\JsonDataProcessor as Json;
 use Drupal\occapi_client\OccapiFieldManager as Fields;
 
 /**
- * Service for data formatting
+ * Service for formatting data.
  */
 class DataFormatter {
 
   use StringTranslationTrait;
 
   /**
-  * JSON data processing service.
+  * The JSON data processor.
   *
   * @var \Drupal\occapi_client\JsonDataProcessor
   */
   protected $jsonDataProcessor;
 
   /**
-  * OCCAPI field manager service.
+  * The OCCAPI field manager.
   *
   * @var \Drupal\occapi_client\OccapiFieldManager
   */
   protected $fieldManager;
 
   /**
-   * Constructs a new DataFormatter.
+   * The constructor.
    *
    * @param \Drupal\occapi_client\JsonDataProcessor $json_data_processor
-   *   JSON data fetching service.
+   *   The JSON data processor.
    * @param \Drupal\occapi_client\OccapiFieldManager $field_manager
-   *   OCCAPI field manager service.
+   *   The OCCAPI field manager.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
    */
@@ -69,17 +69,19 @@ class DataFormatter {
 
     $rows = [];
 
-    if (array_key_exists(Json::DATA_KEY, $collection)) {
-      $data = $collection[Json::DATA_KEY];
+    $data = $collection[Json::DATA_KEY] ?? [];
 
+    if (!empty($data)) {
       foreach ($data as $i => $resource) {
-        $uri = $this->jsonDataProcessor->getLink($resource, Json::SELF_KEY);
+        $uri = $this->jsonDataProcessor
+          ->getResourceLinkByType($resource, Json::SELF_KEY);
+
         $options = ['attributes' => ['target' => '_blank']];
 
         $row = [
-          $this->jsonDataProcessor->getType($resource),
-          $this->jsonDataProcessor->getId($resource),
-          $this->jsonDataProcessor->getTitle($resource),
+          $this->jsonDataProcessor->getResourceType($resource),
+          $this->jsonDataProcessor->getResourceId($resource),
+          $this->jsonDataProcessor->getResourceTitle($resource),
           Link::fromTextAndUrl(Json::SELF_KEY, Url::fromUri($uri, $options))
         ];
 
@@ -127,9 +129,9 @@ class DataFormatter {
     $rows = [];
 
     $row = [
-      $this->jsonDataProcessor->getType($resource),
-      $this->jsonDataProcessor->getId($resource),
-      $this->jsonDataProcessor->getTitle($resource),
+      $this->jsonDataProcessor->getResourceType($resource),
+      $this->jsonDataProcessor->getResourceId($resource),
+      $this->jsonDataProcessor->getResourceTitle($resource),
     ];
 
     $options = ['attributes' => ['target' => '_blank']];
@@ -186,10 +188,12 @@ class DataFormatter {
 
     foreach ($programme_fields as $key => $value) {
       if ($key === Json::TITLE_KEY) {
-        $title = $this->jsonDataProcessor->getTitle($resource);
+        $title = $this->jsonDataProcessor->getResourceTitle($resource);
         $row[] = $title;
       } else {
-        $attribute = $this->jsonDataProcessor->getAttribute($resource, $key);
+        $attribute = $this->jsonDataProcessor
+          ->getResourceAttribute($resource, $key);
+
         $row[] = $attribute[$key];
       }
     }
@@ -248,15 +252,19 @@ class DataFormatter {
 
       foreach ($course_fields as $key => $value) {
         if ($key === Json::TITLE_KEY) {
-          $title = $this->jsonDataProcessor->getTitle($resource);
+          $title = $this->jsonDataProcessor->getResourceTitle($resource);
           $row[] = $title;
         } else {
-          $attribute = $this->jsonDataProcessor->getAttribute($resource, $key);
+          $attribute = $this->jsonDataProcessor
+            ->getResourceAttribute($resource, $key);
+
           $row[] = $attribute[$key];
         }
       }
 
-      $uri = $this->jsonDataProcessor->getLink($resource, Json::SELF_KEY);
+      $uri = $this->jsonDataProcessor
+        ->getResourceLinkByType($resource, Json::SELF_KEY);
+
       $options = ['attributes' => ['target' => '_blank']];
 
       $row[] = Link::fromTextAndUrl(Json::SELF_KEY, Url::fromUri($uri, $options));

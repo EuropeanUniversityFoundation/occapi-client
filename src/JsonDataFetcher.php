@@ -11,13 +11,11 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 
 /**
- * JSON data fetcher.
+ * Service for fetching JSON:API data.
  */
 class JsonDataFetcher implements JsonDataFetcherInterface {
 
   use StringTranslationTrait;
-
-  const INDEX_KEYWORD = 'index';
 
   /**
    * HTTP Client for API calls.
@@ -41,6 +39,13 @@ class JsonDataFetcher implements JsonDataFetcherInterface {
   protected $moduleHandler;
 
   /**
+   * The OCCAPI provider manager.
+   *
+   * @var \Drupal\occapi_client\OccapiProviderManager
+   */
+  protected $providerManager;
+
+  /**
    * An instance of the key/value store.
    *
    * @var \Drupal\Core\TempStore\SharedTempStore
@@ -56,6 +61,8 @@ class JsonDataFetcher implements JsonDataFetcherInterface {
    *   The logger factory service.
    * @param \Drupal\Core\Extension\ModuleHandlerInterface $module_handler
    *   The module handler to invoke the alter hooks with.
+   * @param \Drupal\occapi_client\OccapiProviderManager $provider_manager
+   *   The OCCAPI provider manager.
    * @param \Drupal\Core\TempStore\SharedTempStoreFactory $temp_store_factory
    *   The factory for the temp store object.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
@@ -65,12 +72,14 @@ class JsonDataFetcher implements JsonDataFetcherInterface {
     Client $http_client,
     LoggerChannelFactoryInterface $logger_factory,
     ModuleHandlerInterface $module_handler,
+    OccapiProviderManager $provider_manager,
     SharedTempStoreFactory $temp_store_factory,
     TranslationInterface $string_translation
   ) {
     $this->httpClient         = $http_client;
     $this->logger             = $logger_factory->get('occapi_client');
     $this->moduleHandler      = $module_handler;
+    $this->providerManager    = $provider_manager;
     $this->tempStore          = $temp_store_factory->get('occapi_client');
     $this->stringTranslation  = $string_translation;
   }
@@ -234,18 +243,21 @@ class JsonDataFetcher implements JsonDataFetcherInterface {
    *   A string containing the stored data or NULL.
    */
   public function getUpdated(string $temp_store_key, string $endpoint): ?string {
-    // Check when this item was last updated
+    $hei_temp_store_key = $this->providerManager
+      ->getHeiTempstoreKey($temp_store_key);
+
+    // Check when this item was last updated.
     $item_updated = $this->checkUpdated($temp_store_key);
 
-    if ($temp_store_key != self::INDEX_KEYWORD) {
-      // Check when the index was last updated
-      $index_updated = $this->checkUpdated(self::INDEX_KEYWORD);
+    if ($temp_store_key !== $hei_temp_store_key) {
+      // Check when the provider's Institution resource was last updated.
+      $hei_updated = $this->checkUpdated($hei_temp_store_key);
     } else {
-      // Assign for comparison
-      $index_updated = $item_updated;
+      // Assign for comparison.
+      $hei_updated = $item_updated;
     }
 
-    $refresh = ($item_updated && $index_updated <= $item_updated) ? FALSE : TRUE;
+    $refresh = !($item_updated && $hei_updated <= $item_updated);
 
     return $this->load($temp_store_key, $endpoint, $refresh);
   }

@@ -3,14 +3,9 @@
 namespace Drupal\occapi_client;
 
 /**
- * Defines an interface for a Shared TempStore manager.
+ * Defines an interface for a shared TempStore key manager.
  */
 interface OccapiTempStoreInterface {
-
-  const JSONAPI_TYPE_HEI = 'hei';
-  const JSONAPI_TYPE_OUNIT = 'ounit';
-  const JSONAPI_TYPE_PROGRAMME = 'programme';
-  const JSONAPI_TYPE_COURSE = 'course';
 
   const PARAM_PROVIDER = 'provider';
   const PARAM_FILTER_TYPE = 'filter_type';
@@ -19,6 +14,11 @@ interface OccapiTempStoreInterface {
   const PARAM_RESOURCE_ID = 'resource_id';
 
   const TEMPSTORE_KEY_SEPARATOR = '.';
+
+  const TYPE_HEI = 'hei';
+  const TYPE_OUNIT = 'ounit';
+  const TYPE_PROGRAMME = 'programme';
+  const TYPE_COURSE = 'course';
 
   /**
    * Extract parameters from a TempStore key.
@@ -96,16 +96,5 @@ interface OccapiTempStoreInterface {
    *   The error message if any error is detected.
    */
   public function validateResourceType(string $resource_type, array $allowed_types): ?string;
-
-  /**
-   * Check the TempStore for the updated date.
-   *
-   * @param string $temp_store_key
-   *   The TempStore key.
-   *
-   * @return int|null
-   *   A UNIX timestamp or NULL.
-   */
-  public function checkUpdated(string $temp_store_key): ?int;
 
 }

@@ -2,43 +2,25 @@
 
 namespace Drupal\occapi_client;
 
-use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\occapi_client\DataFormatter;
 use Drupal\occapi_client\Entity\OccapiProvider;
-use Drupal\occapi_client\JsonDataFetcher;
-use Drupal\occapi_client\JsonDataProcessor as Json;
+
 
 /**
  * Service for managing OCCAPI providers.
  */
-class OccapiProviderManager {
+class OccapiProviderManager implements OccapiProviderManagerInterface {
 
   use StringTranslationTrait;
 
-  const ENTITY_TYPE       = 'occapi_provider';
+  const ENTITY_TYPE = 'occapi_provider';
 
-  const HEI_KEY           = 'hei';
-  const OUNIT_KEY         = 'ounit';
-  const PROGRAMME_KEY     = 'programme';
-  const COURSE_KEY        = 'course';
-
-  /**
-   * Config factory.
-   *
-   * @var \Drupal\Core\Config\ConfigFactoryInterface
-   */
-  protected $configFactory;
-
-  /**
-  * Data formatting service.
-  *
-  * @var \Drupal\occapi_client\DataFormatter
-  */
-  protected $dataFormatter;
+  const TYPE_HEI = OccapiTempStoreInterface::TYPE_HEI;
+  const TYPE_OUNIT = OccapiTempStoreInterface::TYPE_OUNIT;
+  const TYPE_PROGRAMME = OccapiTempStoreInterface::TYPE_PROGRAMME;
+  const TYPE_COURSE = OccapiTempStoreInterface::TYPE_COURSE;
 
   /**
    * The entity type manager.
@@ -48,60 +30,26 @@ class OccapiProviderManager {
   protected $entityTypeManager;
 
   /**
-  * JSON data fetching service.
-  *
-  * @var \Drupal\occapi_client\JsonDataFetcher
-  */
-  protected $jsonDataFetcher;
-
-  /**
-  * JSON data processing service.
-  *
-  * @var \Drupal\occapi_client\JsonDataProcessor
-  */
-  protected $jsonDataProcessor;
-
-  /**
-   * The logger service.
+   * The shared TempStore key manager.
    *
-   * @var \Psr\Log\LoggerInterface
+   * @var \Drupal\occapi_client\OccapiTempStoreInterface
    */
-  protected $logger;
+  protected $occapiTempStore;
 
   /**
    * The constructor.
    *
-   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
-   *   The config factory.
-   * @param \Drupal\occapi_client\DataFormatter $data_formatter
-   *   Data formatting service.
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    *   The entity type manager.
-   * @param \Drupal\occapi_client\JsonDataFetcher $json_data_fetcher
-   *   JSON data fetching service.
-   * @param \Drupal\occapi_client\JsonDataProcessor $json_data_processor
-   *   JSON data processing service.
-   * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $logger_factory
-   *   The logger factory service.
-   * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
-   *   The string translation service.
+   * @param \Drupal\occapi_client\OccapiTempStoreInterface $occapi_tempstore
+   *   The shared TempStore key manager.
    */
   public function __construct(
-      ConfigFactoryInterface $config_factory,
-      DataFormatter $data_formatter,
-      EntityTypeManagerInterface $entity_type_manager,
-      JsonDataFetcher $json_data_fetcher,
-      JsonDataProcessor $json_data_processor,
-      LoggerChannelFactoryInterface $logger_factory,
-      TranslationInterface $string_translation
+    EntityTypeManagerInterface $entity_type_manager,
+    OccapiTempStoreInterface $occapi_tempstore
   ) {
-    $this->configFactory      = $config_factory;
-    $this->dataFormatter      = $data_formatter;
-    $this->entityTypeManager  = $entity_type_manager;
-    $this->jsonDataFetcher    = $json_data_fetcher;
-    $this->jsonDataProcessor  = $json_data_processor;
-    $this->logger             = $logger_factory->get('occapi_client');
-    $this->stringTranslation  = $string_translation;
+    $this->entityTypeManager = $entity_type_manager;
+    $this->occapiTempStore   = $occapi_tempstore;
   }
 
   /**
@@ -143,434 +91,35 @@ class OccapiProviderManager {
   }
 
   /**
-   * Validate a collection tempstore key.
+   * Get a provider's Institution TempStore key from another key.
    *
-   * @param string $tempstore
-   *   TempStore key to validate.
-   * @param string $filter|NULL
-   *   OCCAPI entity type key used as filter.
-   * @param string $type|NULL
-   *   OCCAPI entity type key to validate.
+   * @param string $temp_store_key
+   *   The TempStore key.
    *
-   * @return string|null
-   *   The error message if any error is detected.
+   * @return string
+   *   The Institution TempStore key.
    */
-  public function validateCollectionTempstore(string $tempstore, string $filter = NULL, string $type = NULL): ?string {
-    // Parse the tempstore parameter.
-    $components = \explode('.', $tempstore);
+  public function getHeiTempstoreKey(string $temp_store_key): string {
+    $temp_store_params = $this->occapiTempStore
+      ->paramsFromKey($temp_store_key);
 
-    // TempStore key format for a resource collection must have 4 components.
-    if (\count($components) < 4) {
-      return $this->t('Invalid TempStore key format.');
-    }
+    $provider_id = $temp_store_params[OccapiTempStoreInterface::PARAM_PROVIDER];
 
-    // Validate the TempStore key for the parent resource.
-    $parent_tempstore = \implode('.', [
-      $components[0],
-      $components[1],
-      $components[2]
-    ]);
-
-    $error = $this->validateResourceTempstore($parent_tempstore, $filter);
-
-    if (! empty($error)) {
-      return $error;
-    }
-
-    // The fourth component must be a known OCCAPI entity type.
-    $valid_types = [self::PROGRAMME_KEY, self::COURSE_KEY];
-
-    if (! \in_array($components[3], $valid_types)) {
-      return $this->t('Unknown OCCAPI entity type.');
-    }
-
-    // If a type is specified, it must itself be validated.
-    if (! empty($type) && ! \in_array($type, $valid_types)) {
-      $type = NULL;
-    }
-
-    // If a type is specified, the second component must be the same.
-    if (! empty($type) && $components[3] !== $type) {
-      return $this->t('Invalid OCCAPI entity type.');
-    }
-
-    // The tempstore must be populated already.
-    if (empty($this->jsonDataFetcher->checkUpdated($tempstore))) {
-      return $this->t('TempStore is not available.');
-    }
-
-    // No errors found.
-    return NULL;
-  }
-
-  /**
-   * Validate a resource tempstore key.
-   *
-   * @param string $tempstore
-   *   TempStore key to validate.
-   * @param string $type|NULL
-   *   OCCAPI entity type key to validate.
-   *
-   * @return string|null
-   *   The error message if any error is detected.
-   */
-  public function validateResourceTempstore(string $tempstore, string $type = NULL): ?string {
-    // Parse the tempstore parameter.
-    $components = \explode('.', $tempstore);
-
-    // TempStore key format for a single resource must have 3 components.
-    if (\count($components) < 3) {
-      return $this->t('Invalid TempStore key format.');
-    }
-
-    $provider = $this->getProvider($components[0]);
-
-    // The first component must be a valid OCCAPI provider ID.
-    if (! $provider) {
-      return $this->t('Invalid OCCAPI provider ID.');
-    }
-
-    // The OCCAPI provider must be enabled.
-    if (! $provider->status()) {
-      return $this->t('OCCAPI provider is not enabled.');
-    }
-
-    // The second component must be a known OCCAPI entity type.
-    $valid_types = [self::OUNIT_KEY, self::PROGRAMME_KEY, self::COURSE_KEY];
-
-    if (! \in_array($components[1], $valid_types)) {
-      return $this->t('Unknown OCCAPI entity type.');
-    }
-
-    // If a type is specified, it must itself be validated.
-    if (! empty($type) && ! \in_array($type, $valid_types)) {
-      $type = NULL;
-    }
-
-    // If a type is specified, the second component must be the same.
-    if (! empty($type) && $components[1] !== $type) {
-      return $this->t('Invalid OCCAPI entity type.');
-    }
-
-    // The tempstore must be populated already.
-    if (empty($this->jsonDataFetcher->checkUpdated($tempstore))) {
-      return $this->t('TempStore is not available.');
-    }
-
-    // No errors found.
-    return NULL;
-  }
-
-  /**
-  * Load Institution resource.
-  *
-  * @param string $provider_id
-  *   The OCCAPI provider ID.
-  *
-  * @return array|null $data
-  *   An array containing the JSON:API Institution resource data.
-  */
-  public function loadInstitution(string $provider_id): ?array {
     $provider = $this->getProvider($provider_id);
 
-    $hei_id   = $provider->get('hei_id');
-    $endpoint = $provider->get('base_url');
+    $hei_temp_store_params = [
+      OccapiTempStoreInterface::PARAM_PROVIDER => $provider_id,
+      OccapiTempStoreInterface::PARAM_FILTER_TYPE => NULL,
+      OccapiTempStoreInterface::PARAM_FILTER_ID => NULL,
+      OccapiTempStoreInterface::PARAM_RESOURCE_TYPE => self::TYPE_HEI,
+      OccapiTempStoreInterface::PARAM_RESOURCE_ID => $provider->heiId(),
 
-    $tempstore = \implode('.', [$provider_id, self::HEI_KEY, $hei_id]);
+    ];
 
-    $response = $this->jsonDataFetcher
-      ->load($tempstore, $endpoint);
+    $hei_temp_store_key = $this->occapiTempStore
+      ->keyFromParams($hei_temp_store_params);
 
-    $data = \json_decode($response, TRUE);
-
-    return $data;
-  }
-
-  /**
-   * Load resource collection by type.
-   *
-   * @param string $provider_id
-   *   The OCCAPI provider ID.
-   * @param string $type
-   *   The JSON:API resource type key.
-   *
-   * @return array $collection
-   *   An array containing the JSON:API resource collection data.
-   */
-  private function loadCollection(string $provider_id, string $type): array {
-    $provider = $this->getProvider($provider_id);
-
-    if (
-      empty($provider) ||
-      ! \in_array($type, [
-        self::OUNIT_KEY,
-        self::PROGRAMME_KEY,
-        self::COURSE_KEY
-      ])
-    ) {
-      return [];
-    }
-
-    $tempstore = $provider_id . '.' . $type;
-
-    // If data is present in TempStore the endpoint is ignored.
-    $endpoint = '';
-
-    if (empty($this->jsonDataFetcher->checkUpdated($tempstore))) {
-      $hei_data = $this->loadInstitution($provider_id);
-
-      if (! \array_key_exists($type, $hei_data[Json::LINKS_KEY])) {
-        return [];
-      }
-
-      $endpoint = $this->jsonDataProcessor
-        ->getLink($hei_data, $type);
-    }
-
-    $response = $this->jsonDataFetcher
-      ->load($tempstore, $endpoint);
-
-    $collection = \json_decode($response, TRUE);
-
-    return $collection;
-  }
-
-  /**
-   * Load resource collection by type, filtered by parent type and id.
-   *
-   * @param string $provider_id
-   *   The OCCAPI provider ID.
-   * @param string $filter_type
-   *   The JSON:API resource type key to filter by.
-   * @param string $filter_id
-   *   The JSON:API resource ID to filter by.
-   * @param string $type
-   *   The JSON:API resource type key.
-   *
-   * @return array $collection
-   *   An array containing the JSON:API resource collection data.
-   */
-  private function loadFilteredCollection(string $provider_id, string $filter_type, string $filter_id, string $type): array {
-    $provider = $this->getProvider($provider_id);
-
-    if (
-      empty($provider) ||
-      ! \in_array($filter_type, [
-        self::OUNIT_KEY,
-        self::PROGRAMME_KEY
-      ]) ||
-      empty($filter_id) ||
-      ! \in_array($type, [
-        self::PROGRAMME_KEY,
-        self::COURSE_KEY
-      ])
-    ) {
-      return [];
-    }
-
-    $tempstore = \implode('.', [$provider_id, $filter_type, $filter_id, $type]);
-
-    // If data is present in TempStore the endpoint is ignored.
-    $endpoint = '';
-
-    if (empty($this->jsonDataFetcher->checkUpdated($tempstore))) {
-      $filter_data = $this->loadResource($provider_id, $filter_type, $filter_id);
-
-      if (! \array_key_exists($type, $filter_data[Json::LINKS_KEY])) {
-        return [];
-      }
-
-      $endpoint = $this->jsonDataProcessor
-        ->getLink($filter_data, $type);
-    }
-
-    $response = $this->jsonDataFetcher
-      ->load($tempstore, $endpoint);
-
-    $collection = \json_decode($response, TRUE);
-
-    return $collection;
-  }
-
-  /**
-   * Load single resource by type and ID.
-   *
-   * @param string $provider_id
-   *   The OCCAPI provider ID.
-   * @param string $type
-   *   The JSON:API resource type key.
-   * @param string $id
-   *   The JSON:API resource ID.
-   *
-   * @return array $resource
-   *   An array containing the JSON:API resource data.
-   */
-  private function loadResource(string $provider_id, string $type, string $id): array {
-    $collection = $this->loadCollection($provider_id, $type);
-
-    if (
-      empty($collection) ||
-      ! \array_key_exists(Json::DATA_KEY, $collection)
-    ) {
-      return [];
-    }
-
-    $data = $collection[Json::DATA_KEY];
-
-    $tempstore = $provider_id . '.' . $type . '.' . $id;
-
-    // If data is present in TempStore the endpoint is ignored.
-    $endpoint = '';
-
-    if (empty($this->jsonDataFetcher->checkUpdated($tempstore))) {
-      foreach ($data as $i => $resource) {
-        // Only one item at most will pass this check.
-        if ($this->jsonDataProcessor->getId($resource) === $id) {
-          $endpoint = $this->jsonDataProcessor
-            ->getLink($resource, Json::SELF_KEY);
-        }
-      }
-
-      if (empty($endpoint)) {
-        return [];
-      }
-    }
-
-    $response = $this->jsonDataFetcher
-      ->load($tempstore, $endpoint);
-
-    $resource = \json_decode($response, TRUE);
-
-    return $resource;
-  }
-
-  /**
-   * Load Organizational Unit collection.
-   *
-   * @param string $provider_id
-   *   The OCCAPI provider ID.
-   *
-   * @return array
-   *   An array containing the JSON:API resource collection data.
-   */
-  public function loadOunits(string $provider_id): array {
-    return $this->loadCollection($provider_id, self::OUNIT_KEY);
-  }
-
-  /**
-   * Load Organizational Unit resource by ID.
-   *
-   * @param string $provider_id
-   *   The OCCAPI provider ID.
-   * @param string $id
-   *   The JSON:API resource ID.
-   *
-   * @return array
-   *   An array containing the JSON:API resource data.
-   */
-  public function loadOunit(string $provider_id, string $id): array {
-    return $this->loadResource($provider_id, self::OUNIT_KEY, $id);
-  }
-
-  /**
-   * Load Programme collection.
-   *
-   * @param string $provider_id
-   *   The OCCAPI provider ID.
-   *
-   * @return array
-   *   An array containing the JSON:API resource collection data.
-   */
-  public function loadProgrammes(string $provider_id): array {
-    return $this->loadCollection($provider_id, self::PROGRAMME_KEY);
-  }
-
-  /**
-   * Load Programme collection filtered by Organizational Unit.
-   *
-   * @param string $provider_id
-   *   The OCCAPI provider ID.
-   * @param string $ounit_id
-   *   The JSON:API resource ID to filter by.
-   *
-   * @return array
-   *   An array containing the JSON:API resource collection data.
-   */
-  public function loadOunitProgrammes(string $provider_id, string $ounit_id): array {
-    return $this->loadFilteredCollection($provider_id, self::OUNIT_KEY, $ounit_id, self::PROGRAMME_KEY);
-  }
-
-  /**
-   * Load Programme resource by ID.
-   *
-   * @param string $provider_id
-   *   The OCCAPI provider ID.
-   * @param string $id
-   *   The JSON:API resource ID.
-   *
-   * @return array
-   *   An array containing the JSON:API resource data.
-   */
-  public function loadProgramme(string $provider_id, string $id): array {
-    return $this->loadResource($provider_id, self::PROGRAMME_KEY, $id);
-  }
-
-  /**
-   * Load Course collection.
-   *
-   * @param string $provider_id
-   *   The OCCAPI provider ID.
-   *
-   * @return array
-   *   An array containing the JSON:API resource collection data.
-   */
-  public function loadCourses(string $provider_id): array {
-    return $this->loadCollection($provider_id, self::COURSE_KEY);
-  }
-
-  /**
-   * Load Course collection filtered by Organizational Unit.
-   *
-   * @param string $provider_id
-   *   The OCCAPI provider ID.
-   * @param string $ounit_id
-   *   The JSON:API resource ID to filter by.
-   *
-   * @return array
-   *   An array containing the JSON:API resource collection data.
-   */
-  public function loadOunitCourses(string $provider_id, string $ounit_id): array {
-    return $this->loadFilteredCollection($provider_id, self::OUNIT_KEY, $ounit_id, self::COURSE_KEY);
-  }
-
-  /**
-   * Load Course collection filtered by Programme.
-   *
-   * @param string $provider_id
-   *   The OCCAPI provider ID.
-   * @param string $programme_id
-   *   The JSON:API resource ID to filter by.
-   *
-   * @return array
-   *   An array containing the JSON:API resource collection data.
-   */
-  public function loadProgrammeCourses(string $provider_id, string $programme_id): array {
-    return $this->loadFilteredCollection($provider_id, self::PROGRAMME_KEY, $programme_id, self::COURSE_KEY);
-  }
-
-  /**
-   * Load Course resource by ID.
-   *
-   * @param string $provider_id
-   *   The OCCAPI provider ID.
-   * @param string $id
-   *   The JSON:API resource ID.
-   *
-   * @return array
-   *   An array containing the JSON:API resource data.
-   */
-  public function loadCourse(string $provider_id, string $id): array {
-    return $this->loadResource($provider_id, self::COURSE_KEY, $id);
+    return $hei_temp_store_key;
   }
 
 }

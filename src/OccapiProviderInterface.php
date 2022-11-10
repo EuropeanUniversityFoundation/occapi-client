@@ -15,6 +15,14 @@ interface OccapiProviderInterface extends ConfigEntityInterface {
    * @return string|null
    *   The Institution ID if it exists, or NULL otherwise.
    */
-  public function heiId();
+  public function heiId(): ?string;
+
+  /**
+   * Returns the base URL.
+   *
+   * @return string|null
+   *   The base URL if it exists, or NULL otherwise.
+   */
+  public function baseUrl(): ?string;
 
 }
