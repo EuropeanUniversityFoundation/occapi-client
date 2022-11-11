@@ -91,6 +91,23 @@ class OccapiProviderManager implements OccapiProviderManagerInterface {
   }
 
   /**
+   * Get a list of enabled OCCAPI providers by Institution ID.
+   *
+   * @param string $hei_id
+   *   Institution ID to look up.
+   *
+   * @return \Drupal\occapi_client\Entity\OccapiProvider[]
+   *   List of OCCAPI providers covering the Institution.
+   */
+  public function getProvidersByHeiId(string $hei_id): array {
+    $providers = $this->entityTypeManager
+      ->getStorage(self::ENTITY_TYPE)
+      ->loadByProperties(['hei_id' => $hei_id, 'status' => TRUE]) ?? [];
+
+    return $providers;
+  }
+
+  /**
    * Get a provider's Institution TempStore key from another key.
    *
    * @param string $temp_store_key
