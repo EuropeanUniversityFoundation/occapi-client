@@ -176,7 +176,7 @@ class OccapiTempStore implements OccapiTempStoreInterface {
         self::TYPE_COURSE,
       ];
 
-      $error = $this->validateTempstoreType($resource_type, $allowed_types);
+      $error = $this->validateResourceType($resource_type, $allowed_types);
 
       if (!empty($error)) { return $error; }
 
@@ -240,7 +240,7 @@ class OccapiTempStore implements OccapiTempStoreInterface {
         self::TYPE_COURSE,
       ];
 
-      $error = $this->validateTempstoreType($resource_type, $allowed_types);
+      $error = $this->validateResourceType($resource_type, $allowed_types);
 
       if (!empty($error)) { return $error; }
 
