@@ -78,30 +78,16 @@ class OccapiProgrammeImportController extends ControllerBase {
   }
 
   /**
-   * Builds the response.
-   */
-  public function build() {
-    dpm($this);
-
-    $build['content'] = [
-      '#type' => 'item',
-      '#markup' => $this->t('It works!'),
-    ];
-
-    return $build;
-  }
-
-  /**
    * Automatically imports a Programme.
    *
-   * @param string $tempstore
+   * @param string $temp_store_key
    *   The TempStore key.
    *
    * @return RedirectResponse
    */
-  public function import(string $tempstore): RedirectResponse {
+  public function import(string $temp_store_key): RedirectResponse {
     $programme = $this->importManager
-      ->getProgramme($tempstore);
+      ->getProgramme($temp_store_key);
 
     if (!empty($programme)) {
       foreach ($programme as $id => $value) {
@@ -117,18 +103,18 @@ class OccapiProgrammeImportController extends ControllerBase {
   /**
    * Automatically imports a Programme and its Courses.
    *
-   * @param string $tempstore
+   * @param string $temp_store_key
    *   The TempStore key.
    *
    * @return RedirectResponse
    */
-  public function importCourses(string $tempstore): RedirectResponse {
+  public function importCourses(string $temp_store_key): RedirectResponse {
     $programme = $this->importManager
-      ->getProgramme($tempstore);
+      ->getProgramme($temp_store_key);
 
     if (!empty($programme)) {
-      $tempstore .= '.' . OccapiImportManager::COURSE_ENTITY;
-      $params = ['tempstore' => $tempstore];
+      $temp_store_key .= '.' . OccapiImportManager::COURSE_ENTITY;
+      $params = ['tempstore' => $temp_store_key];
       $route = 'occapi_entities_bridge.import_course_multiple';
       return $this->redirect($route, $params);
     }

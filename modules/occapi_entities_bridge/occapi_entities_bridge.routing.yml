@@ -15,7 +15,7 @@ occapi_entities_bridge.select:
     _permission: 'administer course,administer programme'
 
 occapi_entities_bridge.import:
-  path: '/admin/structure/occapi/import/{tempstore}'
+  path: '/admin/structure/occapi/import/{temp_store_key}'
   defaults:
     _form: 'Drupal\occapi_entities_bridge\Form\OccapiImportForm'
     _title: 'Import OCCAPI entities'
@@ -23,8 +23,8 @@ occapi_entities_bridge.import:
     _permission: 'administer course,administer programme'
   options:
     parameters:
-      tempstore:
-        type: tempstore
+      temp_store_key:
+        type: temp_store_key
 
 occapi_entities_bridge.import_confirm:
   path: '/admin/structure/occapi/import/confirm'
@@ -35,7 +35,7 @@ occapi_entities_bridge.import_confirm:
     _permission: 'administer course,administer programme'
 
 occapi_entities_bridge.import_programme:
-  path: '/admin/structure/occapi/programme/import/{tempstore}'
+  path: '/admin/structure/occapi/programme/import/{temp_store_key}'
   defaults:
     _title: 'Import programme'
     _controller: '\Drupal\occapi_entities_bridge\Controller\OccapiProgrammeImportController::import'
@@ -43,11 +43,11 @@ occapi_entities_bridge.import_programme:
     _permission: 'create programme'
   options:
     parameters:
-      tempstore:
-        type: tempstore
+      temp_store_key:
+        type: temp_store_key
 
 occapi_entities_bridge.import_programme_courses:
-  path: '/admin/structure/occapi/programme/import_courses/{tempstore}'
+  path: '/admin/structure/occapi/programme/import_courses/{temp_store_key}'
   defaults:
     _title: 'Import programme with courses'
     _controller: '\Drupal\occapi_entities_bridge\Controller\OccapiProgrammeImportController::importCourses'
@@ -55,11 +55,11 @@ occapi_entities_bridge.import_programme_courses:
     _permission: 'create programme,create course'
   options:
     parameters:
-      tempstore:
-        type: tempstore
+      temp_store_key:
+        type: temp_store_key
 
 occapi_entities_bridge.import_course_multiple:
-  path: '/admin/structure/occapi/course/import_multiple/{tempstore}'
+  path: '/admin/structure/occapi/course/import_multiple/{temp_store_key}'
   defaults:
     _title: 'Import courses'
     _controller: '\Drupal\occapi_entities_bridge\Controller\OccapiCourseImportController::importMultiple'
@@ -67,8 +67,8 @@ occapi_entities_bridge.import_course_multiple:
     _permission: 'create course'
   options:
     parameters:
-      tempstore:
-        type: tempstore
+      temp_store_key:
+        type: temp_store_key
 
 # Programme API form
 entity.programme.api_form:

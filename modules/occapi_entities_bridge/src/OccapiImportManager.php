@@ -2,7 +2,6 @@
 
 namespace Drupal\occapi_entities_bridge;
 
-use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Link;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
@@ -43,13 +42,6 @@ class OccapiImportManager {
 
   // TempStore key suffix for external resources.
   const EXT_SUFFIX       = 'external';
-
-  /**
-   * Config factory.
-   *
-   * @var \Drupal\Core\Config\ConfigFactoryInterface
-   */
-  protected $configFactory;
 
   /**
   * Data formatting service.
@@ -110,8 +102,6 @@ class OccapiImportManager {
   /**
    * The constructor.
    *
-   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
-   *   The config factory.
    * @param \Drupal\occapi_client\DataFormatter $data_formatter
    *   Data formatting service.
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
@@ -132,18 +122,16 @@ class OccapiImportManager {
    *   The string translation service.
    */
   public function __construct(
-      ConfigFactoryInterface $config_factory,
-      DataFormatter $data_formatter,
-      EntityTypeManagerInterface $entity_type_manager,
-      InstitutionManager $hei_manager,
-      JsonDataFetcher $json_data_fetcher,
-      JsonDataProcessor $json_data_processor,
-      LoggerChannelFactoryInterface $logger_factory,
-      MessengerInterface $messenger,
-      OccapiProviderManager $provider_manager,
-      TranslationInterface $string_translation
+    DataFormatter $data_formatter,
+    EntityTypeManagerInterface $entity_type_manager,
+    InstitutionManager $hei_manager,
+    JsonDataFetcher $json_data_fetcher,
+    JsonDataProcessor $json_data_processor,
+    LoggerChannelFactoryInterface $logger_factory,
+    MessengerInterface $messenger,
+    OccapiProviderManager $provider_manager,
+    TranslationInterface $string_translation
   ) {
-    $this->configFactory      = $config_factory;
     $this->dataFormatter      = $data_formatter;
     $this->entityTypeManager  = $entity_type_manager;
     $this->heiManager         = $hei_manager;
@@ -153,249 +141,6 @@ class OccapiImportManager {
     $this->messenger          = $messenger;
     $this->providerManager    = $provider_manager;
     $this->stringTranslation  = $string_translation;
-  }
-
-  /**
-   * Get the field mapping for Programme entities.
-   *
-   * @return array $field_map
-   *   An array in the format [apiAttribute => drupal_field].
-   */
-  public function programmeFieldMap(): array {
-    $field_map = [
-      'title'                 => 'title',
-      'code'                  => 'code',
-      'description'           => 'description',
-      'ects'                  => 'ects',
-      'eqfLevelProvided'      => 'eqf_level_provided',
-      'iscedCode'             => 'isced_code',
-      'languageOfInstruction' => 'language_of_instruction',
-      'length'                => 'length',
-      'url'                   => 'url',
-    ];
-
-    return $field_map;
-  }
-
-  /**
-   * Get the field mapping for Course entities.
-   *
-   * @return array $field_map
-   *   An array in the format [apiAttribute => drupal_field].
-   */
-  public function courseFieldMap(): array {
-    $field_map = [
-      'title'                 => 'title',
-      'code'                  => 'code',
-      'description'           => 'description',
-      'learningOutcomes'      => 'learning_outcomes',
-      'ects'                  => 'ects',
-      'iscedCode'             => 'isced_code',
-      'subjectArea'           => 'subject_area',
-      'otherCategorization'   => 'other_categorization',
-      'languageOfInstruction' => 'language_of_instruction',
-      'academicTerm'          => 'academic_term',
-      'url'                   => 'url',
-    ];
-
-    return $field_map;
-  }
-
-  /**
-   * Display API fields and Drupal fields as HTML table.
-   *
-   * @param array $resource
-   *   An array containing a JSON:API resource collection.
-   * @param string $entity_type
-   *   The target OCCAPI entity type.
-   *
-   * @return string
-   *   Rendered table markup.
-   */
-  public function fieldTable(array $resource, string $entity_type): string {
-    switch ($entity_type) {
-      case self::PROGRAMME_ENTITY:
-        $field_map = $this->programmeFieldMap();
-        break;
-
-      case self::COURSE_ENTITY:
-        $field_map = $this->courseFieldMap();
-        break;
-
-      default:
-        return '<em>' . $this->t('Nothing to display.') . '</em>';
-        break;
-    }
-
-    $data = (\array_key_exists(JsonDataProcessor::DATA_KEY, $resource)) ?
-      $resource[JsonDataProcessor::DATA_KEY] :
-      $resource;
-
-    $header = [
-      $this->t('API object'),
-      $this->t('API field key'),
-      $this->t('API field value'),
-      $this->t('Drupal field key')
-    ];
-
-    $rows = [];
-
-    if (\array_key_exists(JsonDataProcessor::LINKS_KEY, $data)) {
-      $links = $data[JsonDataProcessor::LINKS_KEY];
-    }
-
-    if (\array_key_exists(JsonDataProcessor::REL_KEY, $data)) {
-      $relationships = $data[JsonDataProcessor::REL_KEY];
-    }
-
-    if (\array_key_exists(JsonDataProcessor::ATTR_KEY, $data)) {
-      $attributes = $data[JsonDataProcessor::ATTR_KEY];
-
-      $obj = JsonDataProcessor::ATTR_KEY;
-
-      // Loop over attributes.
-      foreach ($attributes as $field => $field_value) {
-        $label = \implode('.', [$field]);
-        if (! empty($field_value)) {
-          if (! \is_array($field_value)) {
-            // Print the field value.
-            $rows[] = [
-              $obj,
-              $label,
-              $attributes[$field],
-              (\array_key_exists($field, $field_map)) ? $field_map[$field] : ''
-            ];
-          }
-          else {
-            // Print a row with an empty value.
-            $rows[] = [
-              $obj,
-              $label,
-              '',
-              (\array_key_exists($field, $field_map)) ? $field_map[$field] : ''
-            ];
-
-            if (\array_key_exists(0, $field_value)) {
-              // Loop over field values.
-              foreach ($field_value as $i => $item_value) {
-                $label = \implode('.', [$field, $i]);
-
-                if (! \is_array($item_value)) {
-                  // Print the field value.
-                  $rows[] = [
-                    $obj,
-                    $label,
-                    $attributes[$field][$i],
-                    (\array_key_exists($field, $field_map)) ? $field_map[$field].'.'.$i : ''
-                  ];
-                }
-                else {
-                  // Print a row with an empty value.
-                  $rows[] = [
-                    $obj,
-                    $label,
-                    $attributes[$field][$i],
-                    (\array_key_exists($field, $field_map)) ? $field_map[$field].'.'.$i : ''
-                  ];
-
-                  // Expand to property level.
-                  foreach ($item_value as $prop => $prop_value) {
-                    $label = \implode('.', [$field, $i, $prop]);
-
-                    if (! empty($prop_value)) {
-                      $rows[] = [
-                        $obj,
-                        $label,
-                        $attributes[$field][$i][$prop],
-                        (\array_key_exists($field, $field_map)) ? $field_map[$field].'.'.$i.'.'.$prop : ''
-                      ];
-                    }
-                  }
-                }
-              }
-            }
-            else {
-              // Expand to property level.
-              foreach ($field_value as $prop => $prop_value) {
-                $label = \implode('.', [$field, $prop]);
-
-                if (! \is_array($prop_value) && ! empty($field_value)) {
-                  $rows[] = [
-                    $obj,
-                    $label,
-                    $attributes[$field][$prop],
-                    (\array_key_exists($field, $field_map)) ? $field_map[$field].'.'.$prop : ''
-                  ];
-                }
-                else {
-                  // Print an empty row.
-                  $rows[] = [
-                    $obj,
-                    $label,
-                    '',
-                    (\array_key_exists($field, $field_map)) ? $field_map[$field].'.'.$prop : ''
-                  ];
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // Grab the ID.
-      $rows[] = [
-        JsonDataProcessor::ID_KEY,
-        '',
-        $this->jsonDataProcessor->getId($resource),
-        self::REMOTE_ID
-      ];
-
-      // Grab the link.
-      $rows[] = [
-        JsonDataProcessor::LINKS_KEY,
-        \implode('.',[JsonDataProcessor::SELF_KEY, JsonDataProcessor::HREF_KEY]),
-        $this->jsonDataProcessor->getLink($resource, JsonDataProcessor::SELF_KEY),
-        self::REMOTE_URL
-      ];
-    }
-
-    if ($entity_type === self::COURSE_ENTITY) {
-      if (\array_key_exists(JsonDataProcessor::META_KEY, $data)) {
-        $metadata = $data[JsonDataProcessor::META_KEY];
-
-        // Grab the metadata.
-        $rows[] = [
-          JsonDataProcessor::META_KEY,
-          '',
-          \json_encode($metadata, JSON_PRETTY_PRINT),
-          self::JSON_META
-        ];
-      }
-    }
-
-    $build['table'] = [
-      '#type' => 'table',
-      '#header' => $header,
-      '#rows' => $rows,
-    ];
-
-    return render($build);
-  }
-
-  /**
-   * Get a list of eenabled OCCAPI providers by Institution ID.
-   *
-   * @param string $hei_id
-   *   Institution ID to look up.
-   *
-   * @return \Drupal\occapi_client\Entity\OccapiProvider[]
-   */
-  public function getHeiProviders(string $hei_id): array {
-    $providers = $this->entityTypeManager
-      ->getStorage(OccapiProviderManager::ENTITY_TYPE)
-      ->loadByProperties(['hei_id' => $hei_id, 'status' => TRUE]);
-
-    return $providers;
   }
 
   /**
@@ -443,17 +188,17 @@ class OccapiImportManager {
    * Get the ID of a Programme entity;
    *   optionally, create a new entity from a TempStore.
    *
-   * @param string $tempstore
+   * @param string $temp_store_key
    *   TempStore key with programme data.
    *
    * @return array|NULL
    *   An array of [id => Drupal\occapi_entities\Entity\Programme].
    */
-  public function getProgramme(string $tempstore): ?array {
+  public function getProgramme(string $temp_store_key): ?array {
     // Validate the tempstore parameter.
     $error = $this->providerManager
       ->validateResourceTempstore(
-        $tempstore,
+        $temp_store_key,
         OccapiProviderManager::PROGRAMME_KEY
       );
 
@@ -463,7 +208,7 @@ class OccapiImportManager {
     }
 
     // Parse the tempstore key to get the OCCAPI provider and the resource ID.
-    $components  = \explode('.', $tempstore);
+    $components  = \explode('.', $temp_store_key);
     $provider_id = $components[0];
     $resource_id = $components[2];
 
@@ -579,10 +324,10 @@ class OccapiImportManager {
 
     // Finally the remote API fields.
     $entity_data[self::REMOTE_ID] = $this->jsonDataProcessor
-      ->getId($resource);
+      ->getResourceId($resource);
 
     $entity_data[self::REMOTE_URL] = $this->jsonDataProcessor
-      ->getLink($resource, JsonDataProcessor::SELF_KEY);
+      ->getResourceLinkByType($resource, JsonDataProcessor::SELF_KEY);
 
     // Create the new entity.
     $new_entity = $this->entityTypeManager
@@ -601,7 +346,7 @@ class OccapiImportManager {
    * Get the ID of a Course entity;
    *   optionally, create a new entity from a TempStore.
    *
-   * @param string $tempstore
+   * @param string $temp_store_key
    *   TempStore key with course data.
    * @param string $filter
    *   OCCAPI entity type key used as filter.
@@ -609,11 +354,11 @@ class OccapiImportManager {
    * @return array|NULL
    *   An array of [id => Drupal\occapi_entities\Entity\Course].
    */
-  public function getCourses(string $tempstore, string $filter): ?array {
+  public function getCourses(string $temp_store_key, string $filter): ?array {
     // Validate the tempstore parameter.
     $error = $this->providerManager
       ->validateCollectionTempstore(
-        $tempstore,
+        $temp_store_key,
         $filter,
         OccapiProviderManager::COURSE_KEY,
       );
@@ -624,7 +369,7 @@ class OccapiImportManager {
     }
 
     // Parse the tempstore key to get the OCCAPI provider and the resource ID.
-    $components  = \explode('.', $tempstore);
+    $components  = \explode('.', $temp_store_key);
     $provider_id = $components[0];
     $resource_id = $components[2];
 
@@ -643,7 +388,7 @@ class OccapiImportManager {
         ! empty($collection[JsonDataProcessor::DATA_KEY])
       ) {
         foreach ($collection[JsonDataProcessor::DATA_KEY] as $i => $item) {
-          $item_id = $this->jsonDataProcessor->getId($item);
+          $item_id = $this->jsonDataProcessor->getResourceId($item);
 
           // Check if an entity with the same remote ID already exists.
           $exists = $this->entityTypeManager
@@ -804,12 +549,12 @@ class OccapiImportManager {
 
     // Finally the remote API fields.
     $resource_id = $this->jsonDataProcessor
-      ->getId($resource);
+      ->getResourceId($resource);
 
     $entity_data[self::REMOTE_ID] = $resource_id;
 
     $entity_data[self::REMOTE_URL] = $this->jsonDataProcessor
-      ->getLink($resource, JsonDataProcessor::SELF_KEY);
+      ->getResourceLinkByType($resource, JsonDataProcessor::SELF_KEY);
 
     if (\array_key_exists(JsonDataProcessor::META_KEY, $data)) {
       $json_metadata = \json_encode($data[JsonDataProcessor::META_KEY]);
@@ -827,65 +572,6 @@ class OccapiImportManager {
       ->loadByProperties([self::REMOTE_ID => $resource_id]);
 
     return $created;
-  }
-
-  /**
-   * Format remote API fields for display.
-   *
-   * @param string $remote_id
-   *   Remote ID of an OCCAPI resource.
-   * @param string $remote_url
-   *   Remote URL of an OCCAPI resource.
-   *
-   * @return array $markup
-   */
-  public function formatRemoteId(string $remote_id, string $remote_url): string {
-    $markup = '';
-
-    if (! empty($remote_id)) {
-      $markup .= '<p><strong>Remote ID:</strong> ';
-
-      if (empty($remote_url)) {
-        $markup .= '<code>' . $remote_id . '</code>';
-      }
-      else {
-        $url = Url::fromUri($remote_url, [
-          'attributes' => ['target' => '_blank']
-        ]);
-
-        $link = Link::fromTextAndUrl($remote_id, $url)->toString();
-
-        $markup .= '<code>' . $link . '</code>';
-      }
-
-      $markup .= '</p><hr />';
-    }
-
-    return $markup;
-  }
-
-  /**
-   * Load single Course resource directly from an external API.
-   *
-   * @param string $tempstore
-   *   TempStore key for the Course resource.
-   * @param string $endpoint
-   *   The endpoint from which to fetch data.
-   *
-   * @return array $resource
-   *   An array containing the JSON:API resource data.
-   */
-  public function loadExternalCourse(string $tempstore, string $endpoint): array {
-    if (empty($endpoint) || empty($endpoint)) {
-      return [];
-    }
-
-    $response = $this->jsonDataFetcher
-      ->load($tempstore, $endpoint);
-
-    $resource = \json_decode($response, TRUE);
-
-    return $resource;
   }
 
 }

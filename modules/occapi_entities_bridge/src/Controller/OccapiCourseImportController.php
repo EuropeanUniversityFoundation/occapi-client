@@ -36,7 +36,7 @@ class OccapiCourseImportController extends ControllerBase {
   protected $importManager;
 
   /**
-   * Constructs an OccapiCourseImportController object.
+   * The constructor.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    *   The entity type manager.
@@ -78,36 +78,22 @@ class OccapiCourseImportController extends ControllerBase {
   }
 
   /**
-   * Builds the response.
-   */
-  public function build() {
-    dpm($this);
-
-    $build['content'] = [
-      '#type' => 'item',
-      '#markup' => $this->t('It works!'),
-    ];
-
-    return $build;
-  }
-
-  /**
    * Automatically imports multiple Courses.
    *
-   * @param string $tempstore
+   * @param string $temp_store_key
    *   The TempStore key.
    * @param string $filter
    *   OCCAPI entity type key used as filter.
    *
    * @return RedirectResponse
    */
-  public function importMultiple(string $tempstore): RedirectResponse {
+  public function importMultiple(string $temp_store_key): RedirectResponse {
     // Parse the tempstore key to get the OCCAPI filter entity type.
-    $components  = \explode('.', $tempstore);
+    $components  = \explode('.', $temp_store_key);
     $filter = $components[1];
 
     $courses = $this->importManager
-      ->getCourses($tempstore, $filter);
+      ->getCourses($temp_store_key, $filter);
 
     return $this->redirect('<front>');
   }

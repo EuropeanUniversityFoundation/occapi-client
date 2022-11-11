@@ -1,10 +1,24 @@
 services:
   occapi_entities_bridge.manager:
     class: Drupal\occapi_entities_bridge\OccapiImportManager
-    arguments: ['@config.factory', '@occapi_client.format', '@entity_type.manager', '@ewp_institutions_get.manager', '@occapi_client.fetch', '@occapi_client.json', '@logger.factory', '@messenger', '@occapi_client.manager', '@string_translation']
+    arguments: ['@occapi_client.format', '@entity_type.manager', '@ewp_institutions_get.manager', '@occapi_client.fetch', '@occapi_client.json', '@logger.factory', '@messenger', '@occapi_client.manager', '@string_translation']
+
+  occapi_entities_bridge.entity:
+    class: Drupal\occapi_entities_bridge\OccapiEntityManager
+    arguments: ['@entity_type.manager']
+
+  occapi_entities_bridge.fieldmap:
+    class: Drupal\occapi_entities_bridge\OccapiFieldMap
+    arguments: []
+
   occapi_entities_bridge.meta:
     class: Drupal\occapi_entities_bridge\OccapiMetaManager
     arguments: ['@entity_type.manager', '@occapi_entities_bridge.manager', '@string_translation']
+
+  occapi_entities_bridge.remote:
+    class: Drupal\occapi_entities_bridge\OccapiRemoteData
+    arguments: ['@occapi_client.fetch', '@occapi_client.tempstore', '@messenger']
+
   occapi_entities_bridge.route_subscriber:
     class: Drupal\occapi_entities_bridge\Routing\RouteSubscriber
     tags:

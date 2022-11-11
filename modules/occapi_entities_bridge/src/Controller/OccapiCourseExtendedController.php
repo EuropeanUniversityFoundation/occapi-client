@@ -5,8 +5,9 @@ namespace Drupal\occapi_entities_bridge\Controller;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\occapi_client\JsonDataProcessor;
+use Drupal\occapi_client\JsonDataSchemaInterface;
 use Drupal\occapi_client\OccapiFieldManager;
-use Drupal\occapi_client\OccapiProviderManager;
+use Drupal\occapi_client\OccapiProviderManagerInterface;
 use Drupal\occapi_entities\Entity\Course;
 use Drupal\occapi_entities_bridge\OccapiImportManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -16,6 +17,9 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
  * Returns responses for OCCAPI entities bridge routes.
  */
 class OccapiCourseExtendedController extends ControllerBase {
+
+  const DATA_KEY = JsonDataSchemaInterface::JSONAPI_DATA;
+  const ATTR_KEY = JsonDataSchemaInterface::JSONAPI_ATTR;
 
   /**
    * The OCCAPI Course entity.
@@ -39,19 +43,41 @@ class OccapiCourseExtendedController extends ControllerBase {
   protected $importManager;
 
   /**
-   * Constructs an OccapiCourseExternalController object.
+   * The OCCAPI provider manager.
+   *
+   * @var \Drupal\occapi_client\OccapiProviderManagerInterface
+   */
+  protected $providerManager;
+
+  /**
+   * The OCCAPI remote data handler.
+   *
+   * @var \Drupal\occapi_client\OccapiRemoteDataInterface
+   */
+  protected $remoteData;
+
+  /**
+   * The constructor.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    *   The entity type manager.
    * @param \Drupal\occapi_entities_bridge\OccapiImportManager $import_manager
    *   The OCCAPI entity import manager service.
+   * @param \Drupal\occapi_client\OccapiProviderManagerInterface $provider_manager
+   *   The OCCAPI provider manager.
+   * @param \Drupal\occapi_client\OccapiRemoteDataInterface $remote_data
+   *   The OCCAPI remote data handler.
    */
   public function __construct(
     EntityTypeManagerInterface $entity_type_manager,
-    OccapiImportManager $import_manager
+    OccapiImportManager $import_manager,
+    OccapiProviderManagerInterface $provider_manager,
+    OccapiRemoteDataInterface $remote_data
   ) {
     $this->entityTypeManager = $entity_type_manager;
     $this->importManager     = $import_manager;
+    $this->providerManager   = $provider_manager;
+    $this->remoteData        = $remote_data;
   }
 
   /**
@@ -61,6 +87,8 @@ class OccapiCourseExtendedController extends ControllerBase {
     return new static(
       $container->get('entity_type.manager'),
       $container->get('occapi_entities_bridge.manager')
+      $container->get('occapi_client.manager');
+      $container->get('occapi_entities_bridge.remote')
     );
   }
 
@@ -95,8 +123,7 @@ class OccapiCourseExtendedController extends ControllerBase {
       ->value;
 
     // Get the OCCAPI provider that covers the Institution ID.
-    $providers = $this->importManager
-      ->getHeiProviders($hei_id);
+    $providers = $this->providerManager->getProvidersByHeiId($hei_id);
 
     $provider_id = '';
 
@@ -112,10 +139,10 @@ class OccapiCourseExtendedController extends ControllerBase {
     }
 
     // Build the TempStore key for this Course.
-    $tempstore = '';
+    $temp_store_key = '';
 
     if (! empty($remote_id)) {
-      $tempstore = \implode('.', [
+      $temp_store_key = \implode('.', [
         $provider_id,
         OccapiProviderManager::COURSE_KEY,
         $remote_id,
@@ -126,9 +153,9 @@ class OccapiCourseExtendedController extends ControllerBase {
     // Load additional Course data from an external API.
     $course_ext = NULL;
 
-    if (! empty($tempstore) && ! empty($remote_url)) {
-      $course_ext = $this->importManager
-        ->loadExternalCourse($tempstore, $remote_url);
+    if (! empty($temp_store_key) && ! empty($remote_url)) {
+      $course_ext = $this->remoteData
+        ->loadExternalCourse($temp_store_key, $remote_url);
     }
 
     // Prepare the data from the extra fields.
@@ -137,8 +164,8 @@ class OccapiCourseExtendedController extends ControllerBase {
     if (! empty($course_ext)) {
       $course_ext_fields = OccapiFieldManager::getCourseExtraFields();
 
-      $course_ext_data = $course_ext[JsonDataProcessor::DATA_KEY];
-      $course_ext_attributes = $course_ext_data[JsonDataProcessor::ATTR_KEY];
+      $course_ext_data = $course_ext[self::DATA_KEY];
+      $course_ext_attributes = $course_ext_data[self::ATTR_KEY];
 
       foreach ($course_ext_fields as $key => $value) {
         $display_data[$key] = $course_ext_attributes[$key] ?? [];
@@ -166,7 +193,7 @@ class OccapiCourseExtendedController extends ControllerBase {
       foreach ($display_data as $key => $array) {
 
         foreach ($array as $i => $value) {
-          $lang = $value[JsonDataProcessor::LANG_KEY];
+          $lang = $value[self::LANG_KEY];
           $title = ($lang) ? $key . ' <code>' . $lang . '</code>' : $key;
 
           if (isset($value[JsonDataProcessor::MLSTR_KEY])) {

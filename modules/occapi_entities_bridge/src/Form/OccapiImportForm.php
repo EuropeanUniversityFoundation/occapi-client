@@ -10,8 +10,10 @@ use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\Core\Url;
 use Drupal\occapi_client\DataFormatter;
-use Drupal\occapi_client\JsonDataProcessor;
-use Drupal\occapi_client\OccapiProviderManager;
+use Drupal\occapi_client\JsonDataProcessorInterface;
+use Drupal\occapi_client\JsonDataSchemaInterface;
+use Drupal\occapi_client\OccapiProviderManagerInterface;
+use Drupal\occapi_client\OccapiTempStoreInterface;
 use Drupal\occapi_entities_bridge\OccapiImportManager as Manager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -19,6 +21,18 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Provides an OCCAPI entities import form.
  */
 class OccapiImportForm extends FormBase {
+
+  const PARAM_PROVIDER = OccapiTempStoreInterface::PARAM_PROVIDER;
+  const PARAM_RESOURCE_ID = OccapiTempStoreInterface::PARAM_RESOURCE_ID;
+
+  const TYPE_HEI = OccapiTempStoreInterface::TYPE_HEI;
+  const TYPE_OUNIT = OccapiTempStoreInterface::TYPE_OUNIT;
+  const TYPE_PROGRAMME = OccapiTempStoreInterface::TYPE_PROGRAMME;
+  const TYPE_COURSE = OccapiTempStoreInterface::TYPE_COURSE;
+
+  const DATA_KEY = JsonDataSchemaInterface::JSONAPI_DATA;
+  const LINKS_KEY = JsonDataSchemaInterface::JSONAPI_LINKS;
+  const SELF_KEY = JsonDataSchemaInterface::JSONAPI_SELF;
 
   /**
    * Drupal\Core\Session\AccountProxyInterface definition.
@@ -63,6 +77,13 @@ class OccapiImportForm extends FormBase {
   protected $dataFormatter;
 
   /**
+   * the OCCAPI data loader.
+   *
+   * @var \Drupal\occapi_client\OccapiDataLoaderInterface
+   */
+  protected $dataLoader;
+
+  /**
    * OCCAPI entity import manager service.
    *
    * @var \Drupal\occapi_entities_bridge\OccapiImportManager
@@ -72,7 +93,7 @@ class OccapiImportForm extends FormBase {
   /**
    * JSON data processing service.
    *
-   * @var \Drupal\occapi_client\JsonDataProcessor
+   * @var \Drupal\occapi_client\JsonDataProcessorInterface
    */
   protected $jsonDataProcessor;
 
@@ -84,11 +105,18 @@ class OccapiImportForm extends FormBase {
   protected $messenger;
 
   /**
-   * OCCAPI provider manager service.
+   * The OCCAPI provider manager.
    *
-   * @var \Drupal\occapi_client\OccapiProviderManager
+   * @var \Drupal\occapi_client\OccapiProviderManagerInterface
    */
   protected $providerManager;
+
+  /**
+   * The shared TempStore key manager.
+   *
+   * @var \Drupal\occapi_client\OccapiTempStoreInterface
+   */
+  protected $occapiTempStore;
 
   /**
    * {@inheritdoc}
@@ -96,12 +124,14 @@ class OccapiImportForm extends FormBase {
   public static function create(ContainerInterface $container) {
     // Instantiates this form class.
     $instance = parent::create($container);
-    $instance->dataFormatter      = $container->get('occapi_client.format');
-    $instance->importManager      = $container->get('occapi_entities_bridge.manager');
-    $instance->jsonDataProcessor  = $container->get('occapi_client.json');
-    $instance->messenger          = $container->get('messenger');
-    $instance->providerManager    = $container->get('occapi_client.manager');
-    $instance->currentUser        = $container->get('current_user');
+    $instance->dataFormatter     = $container->get('occapi_client.format');
+    $instance->dataLoader        = $container->get('occapi_client.load');
+    $instance->importManager     = $container->get('occapi_entities_bridge.manager');
+    $instance->jsonDataProcessor = $container->get('occapi_client.json');
+    $instance->messenger         = $container->get('messenger');
+    $instance->providerManager   = $container->get('occapi_client.manager');
+    $instance->occapiTempStore   = $container->get('occapi_client.tempstore');
+    $instance->currentUser       = $container->get('current_user');
     return $instance;
   }
 
@@ -115,20 +145,25 @@ class OccapiImportForm extends FormBase {
   /**
    * {@inheritdoc}
    */
-  public function buildForm(array $form, FormStateInterface $form_state, string $tempstore = NULL) {
+  public function buildForm(array $form, FormStateInterface $form_state, string $temp_store_key = NULL) {
     // Give a user with permission the opportunity to add an entity manually.
-    if (
-      $this->currentUser->hasPermission('create programme') &&
-      $this->currentUser->hasPermission('create course') &&
-      $this->currentUser->hasPermission('bypass import occapi entities')
-    ) {
-      $add_programme_link = Link::fromTextAndUrl(t('add a new Programme'),
+    $can_add_programme = $this->currentUser->hasPermission('create programme');
+    $can_add_course = $this->currentUser->hasPermission('create course');
+    $can_bypass = $this->currentUser
+      ->hasPermission('bypass import occapi entities');
+
+    if ($can_add_programme && $can_add_course && $can_bypass) {
+      $add_programme_text = $this->t('add a new Programme');
+      $add_programme_link = Link::fromTextAndUrl($add_programme_text,
         Url::fromRoute('entity.programme.add_form'))->toString();
-      $add_course_link = Link::fromTextAndUrl(t('add a new Course'),
+
+      $add_course_text = $this->t('add a new Course');
+      $add_course_link = Link::fromTextAndUrl($add_course_text,
         Url::fromRoute('entity.course.add_form'))->toString();
 
-      $notice = $this->t('You can bypass this form and @add_programme or @add_course manually.',[
-        '@add_programme' => $add_programme_link,
+      $notice = $this->t('You can @act and @add_prog or @add_course manually.',[
+        '@act' => $this->t('bypass this form'),
+        '@add_prog' => $add_programme_link,
         '@add_course' => $add_course_link
       ]);
 
@@ -136,8 +171,8 @@ class OccapiImportForm extends FormBase {
     }
 
     // Validate the tempstore parameter.
-    $error = $this->providerManager
-      ->validateResourceTempstore($tempstore, OccapiProviderManager::PROGRAMME_KEY);
+    $error = $this->occapiTempStore
+      ->validateResourceTempstore($temp_store_key, self::TYPE_PROGRAMME);
 
     if ($error) {
       $this->messenger->addError($error);
@@ -145,29 +180,22 @@ class OccapiImportForm extends FormBase {
     }
 
     // Parse the tempstore parameter to get the OCCAPI provider and its HEI ID.
-    $components   = \explode('.', $tempstore);
-    $provider_id  = $components[0];
-    $programme_id = $components[2];
+    $temp_store_params = $this->occapiTempStore->paramsFromKey($temp_store_key);
 
-    $provider = $this->providerManager
-      ->getProvider($provider_id);
-
-    $hei_id = $provider->get('hei_id');
+    $provider_id = $temp_store_params[self::PARAM_PROVIDER];
+    $hei_id = $this->providerManager->getProvider($provider_id)->heiId();
+    $programme_id = $temp_store_params[self::PARAM_RESOURCE_ID];
 
     // Check if the Institution is present in the system.
-    $result = $this->importManager
-      ->validateInstitution($hei_id);
+    $result = $this->importManager->validateInstitution($hei_id);
 
     if (! $result['status']) {
       $this->messenger->addError($result['message']);
       return $form;
     }
-    else {
-      $this->messenger->addMessage($result['message']);
-    }
 
     // Load Programme data.
-    $this->programmeResource = $this->providerManager
+    $this->programmeResource = $this->dataLoader
       ->loadProgramme($provider_id, $programme_id);
 
     if (empty($this->programmeResource)) {
@@ -175,12 +203,13 @@ class OccapiImportForm extends FormBase {
       return $form;
     }
 
+    $programme_links = $this->programmeResource[self::LINKS_KEY];
     $programme_table = $this->dataFormatter
       ->programmeResourceTable($this->programmeResource);
 
     $form['programme_tempstore'] = [
       '#type' => 'value',
-      '#value' => $tempstore
+      '#value' => $temp_store_key
     ];
 
     $form['programme'] = [
@@ -195,13 +224,8 @@ class OccapiImportForm extends FormBase {
     ];
 
     // Load Course data.
-    if (
-      \array_key_exists(
-        OccapiProviderManager::COURSE_KEY,
-        $this->programmeResource[JsonDataProcessor::LINKS_KEY]
-      )
-    ) {
-      $this->courseCollection = $this->providerManager
+    if (\array_key_exists(self::TYPE_COURSE, $programme_links)) {
+      $this->courseCollection = $this->dataLoader
         ->loadProgrammeCourses($provider_id, $programme_id);
 
       if (empty($this->courseCollection)) {
@@ -223,21 +247,6 @@ class OccapiImportForm extends FormBase {
       }
     }
 
-    $programme_field_table = $this->importManager
-      ->fieldTable($this->programmeResource, Manager::PROGRAMME_ENTITY);
-
-    $sample_course = $this->courseCollection[JsonDataProcessor::DATA_KEY][0];
-
-    $course_field_table = $this->importManager
-      ->fieldTable($sample_course, Manager::COURSE_ENTITY);
-
-    $form['preview'] = [
-      '#type' => 'markup',
-      // '#markup' => $programme_field_table,
-      // '#markup' => $course_field_table,
-      '#markup' => ''
-    ];
-
     $form['actions'] = [
       '#type' => 'actions',
     ];
@@ -258,8 +267,6 @@ class OccapiImportForm extends FormBase {
       '#value' => $this->t('Import Programme'),
     ];
 
-    // dpm($form);
-
     return $form;
   }
 
@@ -270,10 +277,10 @@ class OccapiImportForm extends FormBase {
     // Prevent the messenger service from rendering the messages again.
     $this->messenger->deleteAll();
 
-    $tempstore = $form_state->getValue('programme_tempstore');
+    $temp_store_key = $form_state->getValue('programme_tempstore');
 
     $form_state->setRedirect('occapi_entities_bridge.import_programme_courses',[
-      'tempstore' => $tempstore
+      'tempstore' => $temp_store_key
     ]);
   }
 
@@ -284,10 +291,10 @@ class OccapiImportForm extends FormBase {
     // Prevent the messenger service from rendering the messages again.
     $this->messenger->deleteAll();
 
-    $tempstore = $form_state->getValue('programme_tempstore');
+    $temp_store_key = $form_state->getValue('programme_tempstore');
 
     $form_state->setRedirect('occapi_entities_bridge.import_programme',[
-      'tempstore' => $tempstore
+      'tempstore' => $temp_store_key
     ]);
   }
 
