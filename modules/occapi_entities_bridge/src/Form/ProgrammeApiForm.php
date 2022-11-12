@@ -128,7 +128,7 @@ class ProgrammeApiForm extends ProgrammeForm {
     $provider_id = '';
 
     // Account for more than one provider for a given Institution ID.
-    if (! empty($providers)) {
+    if (!empty($providers)) {
       $found = FALSE;
       foreach ($providers as $key => $obj) {
         if (! $found) {
@@ -139,7 +139,7 @@ class ProgrammeApiForm extends ProgrammeForm {
     }
 
     // Build the TempStore key for this Programme.
-    if (! empty($remote_id)) {
+    if (!empty($remote_id)) {
       $this->temp_store_key = \implode('.', [
         $provider_id,
         OccapiProviderManager::PROGRAMME_KEY,

@@ -3,39 +3,26 @@
 namespace Drupal\occapi_entities_bridge;
 
 use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\Link;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\Core\Url;
 use Drupal\occapi_entities\Entity\Course;
 use Drupal\occapi_entities\Entity\Programme;
 use Drupal\occapi_entities_bridge\OccapiImportManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Service for managing OCCAPI metadata.
+ * Handles OCCAPI metadata.
  */
-class OccapiMetaManager {
+class OccapiMetadata implements OccapiMetadataInterface {
 
   use StringTranslationTrait;
 
-  // OCCAPI metadata keys.
-  const SCOPE             = 'scope';
+  const ENTITY_PROGRAMME = OccapiEntityManagerInterface::ENTITY_PROGRAMME;
+  const ENTITY_COURSE = OccapiEntityManagerInterface::ENTITY_COURSE;
+  const ENTITY_REF = OccapiEntityManagerInterface::ENTITY_REF;
 
-  const SCOPE_GLOBAL      = 'global';
-  const META_GLOBAL_EQF   = 'eqfLevel';
-
-  const SCOPE_PROGRAMME   = 'programme';
-  const META_PROGRAMME_ID = 'programmeId';
-  const META_PROGRAMME_MC = 'mandatoryCourse';
-
-  const META_YEAR         = 'year';
-
-  // OCCAPI Programme fields.
-  const PROGRAMME_EQF     = 'eqf_level_provided';
-
-  // OCCAPI Course fields.
-  const COURSE_TERM       = 'academic_term';
+  const FIELD_REMOTE_ID = OccapiRemoteDataInterface::FIELD_REMOTE_ID;
+  const FIELD_META = OccapiRemoteDataInterface::FIELD_META;
 
   /**
    * The OCCAPI Course entity.
@@ -88,21 +75,23 @@ class OccapiMetaManager {
   /**
    * Gets all Courses that reference the Programme as related.
    *
-   * @param Programme $programme
+   * @param \Drupal\occapi_entities\Entity\Programme $programme
    *   An OCCAPI Programme entity.
    *
-   * @return Course[] $courses
+   * @return \Drupal\occapi_entities\Entity\Course[] $courses
    *   An array of OCCAPI Course entities keyed by entity ID.
    */
   public function relatedCourses(Programme $programme): array {
     $this->programme = $programme;
 
     $entity_id = $this->programme->id();
-    $remote_id = $this->programme->get(OccapiImportManager::REMOTE_ID)->value;
+    $remote_id = $this->programme->get(self::FIELD_REMOTE_ID)->value;
 
     $courses = $this->entityTypeManager
-      ->getStorage(OccapiImportManager::COURSE_ENTITY)
-      ->loadByProperties([OccapiImportManager::REF_PROGRAMME => $entity_id]);
+      ->getStorage(self::ENTITY_COURSE)
+      ->loadByProperties([
+        self::ENTITY_REF[self::ENTITY_PROGRAMME] => $entity_id
+      ]);
 
     return $courses;
   }
@@ -110,10 +99,10 @@ class OccapiMetaManager {
   /**
    * Gets all Programmes referenced by the Course as related.
    *
-   * @param Course $course
+   * @param \Drupal\occapi_entities\Entity\Course $course
    *   An OCCAPI Programme entity.
    *
-   * @return Programme[] $programmes
+   * @return \Drupal\occapi_entities\Entity\Programme[] $programmes
    *   An array of OCCAPI Course entities keyed by entity ID.
    */
   public function relatedProgrammes(Course $course): array {
@@ -122,7 +111,7 @@ class OccapiMetaManager {
     $programmes = [];
 
     $referenced = $this->course
-      ->get(OccapiImportManager::REF_PROGRAMME)
+      ->get(self::ENTITY_REF[self::ENTITY_PROGRAMME])
       ->referencedEntities();
 
     foreach ($referenced as $i => $programme) {
@@ -135,9 +124,9 @@ class OccapiMetaManager {
   /**
    * Get the metadata for all Programmes related to a Course.
    *
-   * @param Course $course
+   * @param \Drupal\occapi_entities\Entity\Course $course
    *   An OCCAPI Programme entity.
-   * @param Programme[] $programmes
+   * @param \Drupal\occapi_entities\Entity\Programme[] $programmes
    *   An array of OCCAPI Programme entities.
    *
    * @return $metadata
@@ -146,39 +135,39 @@ class OccapiMetaManager {
   public function getMetaByCourse(Course $course, array $programmes): array {
     $this->course = $course;
 
-    $json = $this->course->get(OccapiImportManager::JSON_META)->value;
+    $json = $this->course->get(self::FIELD_META)->value;
     $data = \json_decode($json, TRUE);
 
-    $term = $this->course->get(self::COURSE_TERM)->value;
+    $term = $this->course->get(self::FIELD_COURSE_TERM)->value;
 
     $metadata = [];
 
     foreach ($programmes as $id => $programme) {
       $metadata[$id] = [];
 
-      if (! empty($data)) {
+      if (!empty($data)) {
         if (\array_key_exists(self::SCOPE_PROGRAMME, $data)) {
-          $remote_id = $programme->get(OccapiImportManager::REMOTE_ID)->value;
+          $remote_id = $programme->get(self::FIELD_REMOTE_ID)->value;
 
           foreach ($data[self::SCOPE_PROGRAMME] as $i => $array) {
             if ($array[self::META_PROGRAMME_ID] === $remote_id) {
               $metadata[$id] = [
                 self::SCOPE => self::SCOPE_PROGRAMME,
                 self::META_YEAR => $array[self::META_YEAR],
-                self::COURSE_TERM => $term,
+                self::FIELD_COURSE_TERM => $term,
                 self::META_PROGRAMME_MC => $array[self::META_PROGRAMME_MC]
               ];
             }
           }
         }
         elseif (\array_key_exists(self::SCOPE_GLOBAL, $data)) {
-          $eqf_level = $programme->get(self::PROGRAMME_EQF)->value;
+          $eqf_level = $programme->get(self::FIELD_PROGRAMME_EQF)->value;
 
           if ($data[self::SCOPE_GLOBAL][self::META_GLOBAL_EQF] === $eqf_level) {
             $metadata[$id] = [
               self::SCOPE => self::SCOPE_GLOBAL,
               self::META_YEAR => $data[self::META_YEAR],
-              self::COURSE_TERM => $term,
+              self::FIELD_COURSE_TERM => $term,
               self::META_PROGRAMME_MC => FALSE
             ];
           }
@@ -192,9 +181,9 @@ class OccapiMetaManager {
   /**
    * Get the metadata for all Courses related to a Programme.
    *
-   * @param Programme $programme
+   * @param \Drupal\occapi_entities\Entity\Programme $programme
    *   An OCCAPI Programme entity.
-   * @param Course[] $courses
+   * @param \Drupal\occapi_entities\Entity\Course[] $courses
    *   An array of OCCAPI Course entities.
    *
    * @return $metadata
@@ -250,7 +239,7 @@ class OccapiMetaManager {
         $entity[$key]->toLink(),
         (\array_key_exists(self::META_YEAR, $value)) ?
           $value[self::META_YEAR] : '',
-        $value[self::COURSE_TERM],
+        $value[self::FIELD_COURSE_TERM],
         ($mandatory) ? $this->t('Yes') : '',
         (\array_key_exists(self::SCOPE, $value)) ?
           $value[self::SCOPE] : '',

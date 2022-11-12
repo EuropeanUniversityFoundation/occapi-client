@@ -274,7 +274,7 @@ class OccapiSelectForm extends FormBase {
     $temp_store_key = $this->occapiTempStore->keyFromParams($temp_store_params);
 
     $form_state->setRedirect('occapi_entities_bridge.import',[
-      'tempstore' => $temp_store_key
+      'temp_store_key' => $temp_store_key
     ]);
   }
 
@@ -326,7 +326,7 @@ class OccapiSelectForm extends FormBase {
             $ounit_programmes = $this->dataLoader
               ->loadOunitProgrammes($provider_id, $ounit_id);
 
-            if (! empty($ounit_programmes[self::DATA_KEY])) {
+            if (!empty($ounit_programmes[self::DATA_KEY])) {
               $partial_data = $ounit_programmes[self::DATA_KEY];
               $programme_collection[self::DATA_KEY] += $partial_data;
 
@@ -345,7 +345,7 @@ class OccapiSelectForm extends FormBase {
   }
 
   /**
-  * Fetch the data and preview Programme
+  * Fetch the data and build Programme preview.
   */
   public function previewProgramme(array $form, FormStateInterface $form_state) {
     // Prevent the messenger service from rendering the messages again.
@@ -357,7 +357,7 @@ class OccapiSelectForm extends FormBase {
 
     $programme_id = $form_state->getValue('programme_select');
 
-    if (! empty($provider_id) && !empty($programme_id)) {
+    if (!empty($provider_id) && !empty($programme_id)) {
       $programme_resource = $this->dataLoader
         ->loadProgramme($provider_id, $programme_id);
       $programme_links = $programme_resource[self::LINKS_KEY];

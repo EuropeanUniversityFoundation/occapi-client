@@ -130,7 +130,7 @@ class CourseApiForm extends CourseForm {
     $provider_id = '';
 
     // Account for more than one provider for a given Institution ID.
-    if (! empty($providers)) {
+    if (!empty($providers)) {
       $found = FALSE;
       foreach ($providers as $key => $obj) {
         if (! $found) {
@@ -141,7 +141,7 @@ class CourseApiForm extends CourseForm {
     }
 
     // Build the TempStore key for this Course.
-    if (! empty($remote_id)) {
+    if (!empty($remote_id)) {
       $this->temp_store_key = \implode('.', [
         $provider_id,
         OccapiProviderManager::COURSE_KEY,
@@ -153,7 +153,7 @@ class CourseApiForm extends CourseForm {
     // Load additional Course data from an external API.
     $course_ext = NULL;
 
-    if (! empty($this->temp_store_key) && ! empty($this->endpoint)) {
+    if (!empty($this->temp_store_key) && !empty($this->endpoint)) {
       $course_ext = $this->remoteData
         ->loadExternalCourse($this->temp_store_key, $this->endpoint);
     }
@@ -161,7 +161,7 @@ class CourseApiForm extends CourseForm {
     // Prepare the data from the extra fields.
     $display_data = [];
 
-    if (! empty($course_ext)) {
+    if (!empty($course_ext)) {
       $course_ext_fields = OccapiFieldManager::getCourseExtraFields();
 
       $course_ext_data = $course_ext[JsonDataProcessor::DATA_KEY];
@@ -173,7 +173,7 @@ class CourseApiForm extends CourseForm {
     }
 
     // Render extra field data.
-    if (! empty($display_data)) {
+    if (!empty($display_data)) {
       foreach ($display_data as $key => $array) {
         $form[$key] = [
           '#type' => 'container'

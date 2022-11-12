@@ -221,7 +221,7 @@ class OccapiImportManager {
     if (empty($exists)) {
       $new = $this->createProgrammme($provider_id, $resource_id);
 
-      if (! empty($new)) {
+      if (!empty($new)) {
         $exists = $this->entityTypeManager
           ->getStorage(self::PROGRAMME_ENTITY)
           ->loadByProperties([self::REMOTE_ID => $resource_id]);
@@ -383,9 +383,9 @@ class OccapiImportManager {
         ->loadProgrammeCourses($provider_id, $resource_id);
 
       if (
-        ! empty($collection) &&
+        !empty($collection) &&
         \array_key_exists(JsonDataProcessor::DATA_KEY, $collection) &&
-        ! empty($collection[JsonDataProcessor::DATA_KEY])
+        !empty($collection[JsonDataProcessor::DATA_KEY])
       ) {
         foreach ($collection[JsonDataProcessor::DATA_KEY] as $i => $item) {
           $item_id = $this->jsonDataProcessor->getResourceId($item);
@@ -408,7 +408,7 @@ class OccapiImportManager {
           if (empty($exists)) {
             $new = $this->createCourse($provider_id, $item, $programme_id);
 
-            if (! empty($new)) {
+            if (!empty($new)) {
               $exists = $this->entityTypeManager
                 ->getStorage(self::COURSE_ENTITY)
                 ->loadByProperties([self::REMOTE_ID => $item_id]);
@@ -450,14 +450,14 @@ class OccapiImportManager {
     }
 
     // Count the occurrences and issue messages accordingly.
-    if (! empty($created_items)) {
+    if (!empty($created_items)) {
       $message = $this->t('Successfully created @count Courses.', [
         '@count' => \count($created_items),
       ]);
       $this->messenger->addMessage($message);
     }
 
-    if (! empty($existing_items)) {
+    if (!empty($existing_items)) {
       $message = $this->t('Updated @up of @there existing Courses.', [
         '@up' => \count($updated_items),
         '@there' => \count($existing_items),
@@ -465,7 +465,7 @@ class OccapiImportManager {
       $this->messenger->addWarning($message);
     }
 
-    if (! empty($failed_items)) {
+    if (!empty($failed_items)) {
       $message = $this->t('Failed to import @count Courses', [
         '@count' => \count($failed_items),
       ]);
@@ -474,7 +474,7 @@ class OccapiImportManager {
 
     $courses = $created_items + $existing_items;
 
-    if (! empty($courses)) {
+    if (!empty($courses)) {
       return $courses;
     }
 
@@ -543,7 +543,7 @@ class OccapiImportManager {
       $entity_data[self::REF_HEI] = ['target_id' => $id];
     }
 
-    if (! empty($programme_id)) {
+    if (!empty($programme_id)) {
       $entity_data[self::REF_PROGRAMME] = ['target_id' => $programme_id];
     }
 
