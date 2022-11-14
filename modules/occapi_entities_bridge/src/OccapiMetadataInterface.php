@@ -2,6 +2,9 @@
 
 namespace Drupal\occapi_entities_bridge;
 
+use Drupal\occapi_entities\Entity\Course;
+use Drupal\occapi_entities\Entity\Programme;
+
 /**
  * Defines an interface for handling OCCAPI metadata.
  */

@@ -2,6 +2,8 @@
 
 namespace Drupal\occapi_entities_bridge;
 
+use Drupal\Core\Entity\EntityTypeInterface;
+
 /**
  * Defines an interface for an OCCAPI remote data handler.
  */
