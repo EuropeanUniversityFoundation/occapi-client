@@ -124,13 +124,11 @@ class OccapiTempStore implements OccapiTempStoreInterface {
    *
    * @param string $temp_store_key
    *   The TempStore key.
-   * @param boolean $single
-   *   Whether the key refers to a single resource (defaults to FALSE).
    *
    * @return bool
    *   Returns TRUE is validation passes, otherwise FALSE.
    */
-  public function validateTempstoreKey(string $temp_store_key, bool $single = FALSE): bool {
+  public function validateTempstoreKey(string $temp_store_key): bool {
     $error = NULL;
 
     $temp_store_params = $this->paramsFromKey($temp_store_key);
@@ -145,14 +143,6 @@ class OccapiTempStore implements OccapiTempStoreInterface {
       $error = $this->t('Empty parameter: %param', [
         '%param' => self::PARAM_RESOURCE_TYPE
       ]);
-    }
-
-    if ($single && empty($temp_store_params[self::PARAM_RESOURCE_ID])) {
-      $error = $this->t('Missing resource ID for single resource.');
-    }
-
-    if (!$single && !empty($temp_store_params[self::PARAM_RESOURCE_ID])) {
-      $error = $this->t('Unexpected resource ID for resource collection.');
     }
 
     $has_filter_type = (!empty($temp_store_params[self::PARAM_FILTER_TYPE]));

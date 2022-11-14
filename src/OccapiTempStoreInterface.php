@@ -48,13 +48,11 @@ interface OccapiTempStoreInterface {
    *
    * @param string $temp_store_key
    *   The TempStore key.
-   * @param bool $single
-   *   Whether the key refers to a single resource (defaults to FALSE).
    *
    * @return bool
    *   Returns TRUE is validation passes, otherwise FALSE.
    */
-  public function validateTempstoreKey(string $temp_store_key, bool $single = FALSE): bool;
+  public function validateTempstoreKey(string $temp_store_key): bool;
 
   /**
    * Validate a collection TempStore key.

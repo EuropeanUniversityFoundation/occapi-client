@@ -23,9 +23,12 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class OccapiImportForm extends FormBase {
 
   const PARAM_PROVIDER = OccapiTempStoreInterface::PARAM_PROVIDER;
+  const PARAM_FILTER_TYPE = OccapiTempStoreInterface::PARAM_FILTER_TYPE;
+  const PARAM_FILTER_ID = OccapiTempStoreInterface::PARAM_FILTER_ID;
+  const PARAM_RESOURCE_TYPE = OccapiTempStoreInterface::PARAM_RESOURCE_TYPE;
   const PARAM_RESOURCE_ID = OccapiTempStoreInterface::PARAM_RESOURCE_ID;
+  const PARAM_EXTERNAL = OccapiTempStoreInterface::PARAM_EXTERNAL;
 
-  const TYPE_HEI = OccapiTempStoreInterface::TYPE_HEI;
   const TYPE_OUNIT = OccapiTempStoreInterface::TYPE_OUNIT;
   const TYPE_PROGRAMME = OccapiTempStoreInterface::TYPE_PROGRAMME;
   const TYPE_COURSE = OccapiTempStoreInterface::TYPE_COURSE;
@@ -37,37 +40,30 @@ class OccapiImportForm extends FormBase {
   /**
    * Drupal\Core\Session\AccountProxyInterface definition.
    *
-   * @var AccountProxyInterface $currentUser
+   * @var \Drupal\Core\Session\AccountProxyInterface $current_user
    */
   protected $currentUser;
 
   /**
-   * OCCAPI Institution resource.
-   *
-   * @var array
-   */
-  protected $heiResource;
-
-  /**
-   * OCCAPI Programme resource.
-   *
-   * @var array
-   */
-  protected $programmeResource;
-
-  /**
-   * OCCAPI Course collection.
-   *
-   * @var array
-   */
-  protected $courseCollection;
-
-  /**
-   * Empty data placeholder.
+   * Individual resource type.
    *
    * @var string
    */
-  protected $emptyData;
+  protected $resourceType;
+
+  /**
+   * Individual resource ID.
+   *
+   * @var string
+   */
+  protected $resourceId;
+
+  /**
+   * Resource type in collection.
+   *
+   * @var string
+   */
+  protected $collectionType;
 
   /**
    * Data formatter service.
@@ -152,91 +148,191 @@ class OccapiImportForm extends FormBase {
 
     $this->importManager->checkBypassPermission($this->currentUser);
 
-    // Validate the tempstore parameter.
-    $validated = $this->occapiTempStore
-      ->validateResourceTempstore($temp_store_key, self::TYPE_PROGRAMME);
+    // Validate the TempStore key.
+    $validated = $this->occapiTempStore->validateTempstoreKey($temp_store_key);
 
     if (!$validated) { return $form; }
 
-    // Parse the tempstore parameter to get the OCCAPI provider and its HEI ID.
+    // Start building the form by setting the reference values.
+    $form['resource_tempstore'] = [
+      '#type' => 'value',
+      '#value' => NULL,
+      '#attributes' => [
+        '#name' => 'resource_tempstore',
+      ],
+    ];
+
+    $form['collection_tempstore'] = [
+      '#type' => 'value',
+      '#value' => NULL,
+      '#attributes' => [
+        '#name' => 'collection_tempstore',
+      ],
+    ];
+
+    // Parse the TempStore parameters.
     $temp_store_params = $this->occapiTempStore->paramsFromKey($temp_store_key);
 
     $provider_id = $temp_store_params[self::PARAM_PROVIDER];
-    $hei_id = $this->providerManager->getProvider($provider_id)->heiId();
-    $programme_id = $temp_store_params[self::PARAM_RESOURCE_ID];
+    $filter_type = $temp_store_params[self::PARAM_FILTER_TYPE];
+    $filter_id = $temp_store_params[self::PARAM_FILTER_ID];
+    $resource_type = $temp_store_params[self::PARAM_RESOURCE_TYPE];
+    $resource_id = $temp_store_params[self::PARAM_RESOURCE_ID];
 
-    // Load Programme data.
-    $this->programmeResource = $this->dataLoader
-      ->loadProgramme($provider_id, $programme_id);
+    if (!empty($resource_id)) {
+      // Presence of a resource ID indicates a resource TempStore.
+      $this->resourceType = $resource_type;
+      $this->resourceId = $resource_id;
+      $form['resource_tempstore']['#value'] = $temp_store_key;
 
-    if (empty($this->programmeResource)) {
-      $this->messenger->addError($this->t('Missing programme data!'));
-      return $form;
+      if ($resource_type !== self::TYPE_COURSE) {
+        // Get collection links from the resource.
+        $links = $this->getLinks($provider_id, $resource_type, $resource_id);
+
+        if (\count($links) === 1) {
+          $link_type = \array_keys($links)[0];
+
+          $child_temp_store_params = [
+            self::PARAM_PROVIDER => $provider_id,
+            self::PARAM_FILTER_TYPE => $resource_type,
+            self::PARAM_FILTER_ID => $resource_id,
+            self::PARAM_RESOURCE_TYPE => $link_type,
+            self::PARAM_RESOURCE_ID => NULL,
+            self::PARAM_EXTERNAL => NULL,
+          ];
+
+          $child_temp_store_key = $this->occapiTempStore
+            ->keyFromParams($child_temp_store_params);
+
+          // Validate the child TempStore key.
+          $validated = $this->occapiTempStore
+            ->validateTempstoreKey($child_temp_store_key);
+
+          if ($validated) {
+            // The derived TempStore is the collection.
+            $this->collectionType = $link_type;
+            $form['collection_tempstore']['#value'] = $child_temp_store_key;
+          }
+        }
+        else {
+          // TODO: Handle edge cases.
+        }
+      }
+    }
+    else {
+      // Otherwise it is a collection TempStore.
+      $this->collectionType = $resource_type;
+      $form['collection_tempstore']['#value'] = $temp_store_key;
     }
 
-    $programme_links = $this->programmeResource[self::LINKS_KEY];
-    $programme_table = $this->dataFormatter
-      ->programmeResourceTable($this->programmeResource);
+    if (!empty($filter_id)) {
+      // Presence of a filter indicates a filtered collection TempStore.
+      $filter_temp_store_params = [
+        self::PARAM_PROVIDER => $provider_id,
+        self::PARAM_FILTER_TYPE => NULL,
+        self::PARAM_FILTER_ID => NULL,
+        self::PARAM_RESOURCE_TYPE => $filter_type,
+        self::PARAM_RESOURCE_ID => $filter_id,
+        self::PARAM_EXTERNAL => NULL,
+      ];
 
-    $form['programme_tempstore'] = [
-      '#type' => 'value',
-      '#value' => $temp_store_key
-    ];
+      $filter_temp_store_key = $this->occapiTempStore
+        ->keyFromParams($filter_temp_store_params);
 
-    $form['programme'] = [
-      '#type' => 'details',
-      '#title' => $this->t('Programme resource data'),
-      '#open' => TRUE
-    ];
+      // Validate the filter TempStore key.
+      $validated = $this->occapiTempStore
+        ->validateResourceTempstore($filter_temp_store_key, $filter_type);
 
-    $form['programme']['data'] = [
-      '#type' => 'markup',
-      '#markup' => $programme_table
-    ];
+      if ($validated) {
+        // The filter of the collection is the individual resource.
+        $this->resourceType = $filter_type;
+        $this->resourceId = $filter_id;
+        $form['resource_tempstore']['#value'] = $filter_temp_store_key;
+      }
+    }
 
-    // Load Course data.
-    if (\array_key_exists(self::TYPE_COURSE, $programme_links)) {
-      $this->courseCollection = $this->dataLoader
-        ->loadProgrammeCourses($provider_id, $programme_id);
+    $has_resource = !empty($form['resource_tempstore']['#value']);
 
-      if (empty($this->courseCollection)) {
-        $this->messenger->addWarning($this->t('Missing course data!'));
+    if ($has_resource) {
+      // Load resource data.
+      $resource = $this->dataLoader
+        ->loadResource($provider_id, $this->resourceType, $this->resourceId);
+
+      $resource_table = $this->dataFormatter->resourceTable($resource);
+
+      $form['resource'] = [
+        '#type' => 'details',
+        '#title' => $this->t('Resource data'),
+        '#open' => TRUE,
+      ];
+
+      $form['resource']['data'] = [
+        '#type' => 'markup',
+        '#markup' => $resource_table,
+      ];
+    }
+
+    $has_collection = !empty($form['collection_tempstore']['#value']);
+
+    if ($has_collection) {
+      if (!empty($this->resourceId)) {
+        // Load filtered collection data.
+        $collection = $this->dataLoader
+          ->loadFilteredCollection($provider_id, $this->resourceType, $this->resourceId, $this->collectionType);
       }
       else {
-        $course_table = $this->dataFormatter
-          ->courseCollectionTable($this->courseCollection);
-
-        $form['course'] = [
-          '#type' => 'details',
-          '#title' => $this->t('Course collection data')
-        ];
-
-        $form['course']['data'] = [
-          '#type' => 'markup',
-          '#markup' => $course_table
-        ];
+        // Load collection data.
+        $collection = $this->dataLoader
+          ->loadCollection($provider_id, $this->collectionType);
       }
+
+      $collection_table = $this->dataFormatter->collectionTable($collection);
+
+      $form['collection'] = [
+        '#type' => 'details',
+        '#title' => $this->t('Collection data'),
+        '#open' => TRUE,
+      ];
+
+      $form['collection']['data'] = [
+        '#type' => 'markup',
+        '#markup' => $collection_table,
+      ];
     }
 
     $form['actions'] = [
       '#type' => 'actions',
     ];
 
-    $form['actions']['import_all'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Import all'),
-      '#attributes' => [
-        'class' => [
-          'button--primary',
-        ]
-      ],
-    ];
+    if ($has_resource && $this->resourceType !== self::TYPE_OUNIT) {
+      $form['actions']['import_resource'] = [
+        '#type' => 'submit',
+        '#submit' => ['::importResource'],
+        '#value' => $this->t('Import @type resource', [
+          '@type' => $this->resourceType
+        ]),
+        '#attributes' => [
+          'class' => [
+            'button--primary',
+          ]
+        ],
+      ];
+    }
 
-    $form['actions']['import'] = [
-      '#type' => 'submit',
-      '#submit' => ['::importProgramme'],
-      '#value' => $this->t('Import Programme'),
-    ];
+    if ($has_collection && $this->collectionType !== self::TYPE_OUNIT) {
+      $form['actions']['import'] = [
+        '#type' => 'submit',
+        '#submit' => ['::importCollection'],
+        '#value' => $this->t('Import @type collection', [
+          '@type' => $this->collectionType
+        ]),
+        '#attributes' => [
+          'class' => [
+            'button--primary',
+          ]
+        ],
+      ];
+    }
 
     return $form;
   }
@@ -245,28 +341,57 @@ class OccapiImportForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function importResource(array &$form, FormStateInterface $form_state) {
     // Prevent the messenger service from rendering the messages again.
     $this->messenger->deleteAll();
 
-    $temp_store_key = $form_state->getValue('programme_tempstore');
+    $temp_store_key = $form_state->getValue('resource_tempstore');
 
-    $form_state->setRedirect('occapi_entities_bridge.import_programme_courses',[
-      'tempstore' => $temp_store_key
+    $form_state->setRedirect('occapi_entities_bridge.import.execute', [
+      'temp_store_key' => $temp_store_key
     ]);
   }
 
   /**
    * {@inheritdoc}
    */
-  public function importProgramme(array &$form, FormStateInterface $form_state) {
+  public function importCollection(array &$form, FormStateInterface $form_state) {
     // Prevent the messenger service from rendering the messages again.
     $this->messenger->deleteAll();
 
-    $temp_store_key = $form_state->getValue('programme_tempstore');
+    $temp_store_key = $form_state->getValue('collection_tempstore');
 
-    $form_state->setRedirect('occapi_entities_bridge.import_programme',[
-      'tempstore' => $temp_store_key
+    $form_state->setRedirect('occapi_entities_bridge.import.execute', [
+      'temp_store_key' => $temp_store_key
     ]);
+  }
+
+  /**
+   * Helper method to find collection links in a resource.
+   */
+  protected function getLinks(string $provider_id, string $resource_type, string $resource_id) {
+    $links = [];
+
+    $resource = $this->dataLoader
+      ->loadResource($provider_id, $resource_type, $resource_id);
+
+    if (empty($resource)) {
+      $this->messenger->addError($this->t('Missing resource data!'));
+      return [];
+    }
+
+    foreach ($resource[self::LINKS_KEY] as $link_type => $link_uri) {
+      if ($link_type !== self::SELF_KEY) {
+        $links[$link_type] = $link_uri;
+      }
+    }
+
+    return $links;
   }
 
 }
