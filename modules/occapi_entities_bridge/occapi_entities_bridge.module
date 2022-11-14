@@ -32,8 +32,10 @@ function occapi_entities_bridge_occapi_provider_prepare_form(EntityInterface $en
  * Add new base fields to the OCCAPI entity types to store remote API data.
  */
 function occapi_entities_bridge_entity_base_field_info(EntityTypeInterface $entity_type) {
-  $remote_data = \Drupal::service('occapi_entities_bridge.remote');
-  $fields = $remote_data->attachBaseFields($entity_type);
+  if (in_array($entity_type, ['programme', 'course'])) {
+    $remote_data = \Drupal::service('occapi_entities_bridge.remote');
+    return $remote_data->attachBaseFields($entity_type);
+  }
 }
 
 /**
