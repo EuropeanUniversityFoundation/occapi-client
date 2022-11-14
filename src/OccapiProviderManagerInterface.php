@@ -18,6 +18,14 @@ interface OccapiProviderManagerInterface {
   public function getProviders(): array;
 
   /**
+   * Get a list of enabled OCCAPI providers.
+   *
+   * @return \Drupal\occapi_client\Entity\OccapiProvider[]
+   *   List of OCCAPI providers.
+   */
+  public function getEnabledProviders(): array;
+
+  /**
    * Get an OCCAPI provider by ID.
    *
    * @param string $id

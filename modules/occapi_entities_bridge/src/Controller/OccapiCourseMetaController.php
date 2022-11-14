@@ -4,10 +4,9 @@ namespace Drupal\occapi_entities_bridge\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\occapi_entities\Entity\Course;
-use Drupal\occapi_entities_bridge\OccapiImportManager;
-use Drupal\occapi_entities_bridge\OccapiMetaManager;
+use Drupal\occapi_entities_bridge\OccapiEntityManagerInterface;
+use Drupal\occapi_entities_bridge\OccapiMetadataInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\HttpFoundation\RedirectResponse;
 
 /**
  * Returns responses for OCCAPI entities bridge routes.
@@ -24,18 +23,18 @@ class OccapiCourseMetaController extends ControllerBase {
   /**
    * OCCAPI metadata manager service.
    *
-   * @var \Drupal\occapi_entities_bridge\OccapiMetaManager
+   * @var \Drupal\occapi_entities_bridge\OccapiMetadataInterface
    */
   protected $metaManager;
 
   /**
-   * Constructs an OccapiCourseImportController object.
+   * The constructor.
    *
-   * @param \Drupal\occapi_entities_bridge\OccapiMetaManager $meta_manager
+   * @param \Drupal\occapi_entities_bridge\OccapiMetadataInterface $meta_manager
    *   The OCCAPI entity import manager service.
    */
   public function __construct(
-    OccapiMetaManager $meta_manager
+    OccapiMetadataInterface $meta_manager
   ) {
     $this->metaManager = $meta_manager;
   }
@@ -55,8 +54,10 @@ class OccapiCourseMetaController extends ControllerBase {
    * @return string
    *   The title for the entity controller.
    */
-  public function relatedProgrammesTitle() {
-    return $this->t('Related programmes');
+  public function relatedProgrammesTitle(Course $course) {
+    return $this->t('Programmes related to @course', [
+      '@course' => $course->label()
+    ]);
   }
 
   /**
@@ -72,7 +73,7 @@ class OccapiCourseMetaController extends ControllerBase {
       ->getMetaByCourse($this->entity, $programmes);
 
     $markup = $this->metaManager
-      ->metaTable($metadata, OccapiImportManager::PROGRAMME_ENTITY);
+      ->metaTable($metadata, OccapiEntityManagerInterface::ENTITY_PROGRAMME);
 
     $build['content'] = [
       '#type' => 'item',

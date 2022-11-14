@@ -53,23 +53,25 @@ class OccapiRelationships implements OccapiRelationshipsInterface {
     $resource_id_param = OccapiTempStoreInterface::PARAM_RESOURCE_ID;
 
     if (!empty($temp_store_params[$resource_id_param])) {
-      $error = $this->tempStore->validateResourceTempstore($temp_store_key);
+      $validated = $this->tempStore
+        ->validateResourceTempstore($temp_store_key);
     } else {
-      $error = $this->tempStore->validateCollectionTempstore($temp_store_key);
+      $validated = $this->tempStore
+        ->validateCollectionTempstore($temp_store_key);
     }
 
-    if (empty($error)) {
+    if ($validated) {
       $filter_type_param = OccapiTempStoreInterface::PARAM_FILTER_TYPE;
       $filter_type = $temp_store_params[$filter_type_param];
       $filter_id_param = OccapiTempStoreInterface::PARAM_FILTER_ID;
       $filter_id = $temp_store_params[$filter_id_param];
 
       if (empty($filter_type) && empty($filter_id)) {
-        $error = $this->t('Filter unavailable.');
+        $validated = FALSE;
       }
     }
 
-    if (empty($error)) {
+    if ($validated) {
       $decoded = \json_decode($data, TRUE);
 
       if (\array_key_exists(0, $decoded)) {

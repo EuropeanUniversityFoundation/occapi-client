@@ -2,6 +2,8 @@
 
 namespace Drupal\occapi_client;
 
+use Drupal\Core\Messenger\MessengerInterface;
+
 /**
  * Service for loading OCCAPI data.
  */
@@ -12,6 +14,7 @@ class OccapiDataLoader implements OccapiDataLoaderInterface {
   const PARAM_FILTER_ID = OccapiTempStoreInterface::PARAM_FILTER_ID;
   const PARAM_RESOURCE_TYPE = OccapiTempStoreInterface::PARAM_RESOURCE_TYPE;
   const PARAM_RESOURCE_ID = OccapiTempStoreInterface::PARAM_RESOURCE_ID;
+  const PARAM_EXTERNAL = OccapiTempStoreInterface::PARAM_EXTERNAL;
 
   const TYPE_HEI = OccapiTempStoreInterface::TYPE_HEI;
   const TYPE_OUNIT = OccapiTempStoreInterface::TYPE_OUNIT;
@@ -37,6 +40,13 @@ class OccapiDataLoader implements OccapiDataLoaderInterface {
   protected $jsonDataProcessor;
 
   /**
+   * The messenger service.
+   *
+   * @var \Drupal\Core\Messenger\MessengerInterface
+   */
+  protected $messenger;
+
+  /**
    * The OCCAPI provider manager.
    *
    * @var \Drupal\occapi_client\OccapiProviderManagerInterface
@@ -57,6 +67,8 @@ class OccapiDataLoader implements OccapiDataLoaderInterface {
    *   The JSON data fetcher.
    * @param \Drupal\occapi_client\JsonDataProcessorInterface $json_data_processor
    *   The JSON data processor.
+   * @param \Drupal\Core\Messenger\MessengerInterface $messenger
+   *   The messenger service.
    * @param \Drupal\occapi_client\OccapiProviderManagerInterface $provider_manager
    *   The OCCAPI provider manager.
    * @param \Drupal\occapi_client\OccapiTempStoreInterface $occapi_tempstore
@@ -65,11 +77,13 @@ class OccapiDataLoader implements OccapiDataLoaderInterface {
   public function __construct(
     JsonDataFetcherInterface $json_data_fetcher,
     JsonDataProcessorInterface $json_data_processor,
+    MessengerInterface $messenger,
     OccapiProviderManager $provider_manager,
     OccapiTempStoreInterface $occapi_tempstore
   ) {
     $this->jsonDataFetcher   = $json_data_fetcher;
     $this->jsonDataProcessor = $json_data_processor;
+    $this->messenger         = $messenger;
     $this->providerManager   = $provider_manager;
     $this->occapiTempStore   = $occapi_tempstore;
   }
@@ -92,6 +106,7 @@ class OccapiDataLoader implements OccapiDataLoaderInterface {
       self::PARAM_FILTER_ID => NULL,
       self::PARAM_RESOURCE_TYPE => self::TYPE_HEI,
       self::PARAM_RESOURCE_ID => $provider->heiId(),
+      self::PARAM_EXTERNAL => NULL,
     ];
 
     $temp_store_key = $this->occapiTempStore
@@ -135,6 +150,7 @@ class OccapiDataLoader implements OccapiDataLoaderInterface {
       self::PARAM_FILTER_ID => NULL,
       self::PARAM_RESOURCE_TYPE => $resource_type,
       self::PARAM_RESOURCE_ID => NULL,
+      self::PARAM_EXTERNAL => NULL,
     ];
 
     $temp_store_key = $this->occapiTempStore
@@ -201,6 +217,7 @@ class OccapiDataLoader implements OccapiDataLoaderInterface {
       self::PARAM_FILTER_ID => $filter_id,
       self::PARAM_RESOURCE_TYPE => $resource_type,
       self::PARAM_RESOURCE_ID => NULL,
+      self::PARAM_EXTERNAL => NULL,
     ];
 
     $temp_store_key = $this->occapiTempStore
@@ -254,6 +271,7 @@ class OccapiDataLoader implements OccapiDataLoaderInterface {
       self::PARAM_FILTER_ID => NULL,
       self::PARAM_RESOURCE_TYPE => $resource_type,
       self::PARAM_RESOURCE_ID => $resource_id,
+      self::PARAM_EXTERNAL => NULL,
     ];
 
     $temp_store_key = $this->occapiTempStore
@@ -410,6 +428,30 @@ class OccapiDataLoader implements OccapiDataLoaderInterface {
    */
   public function loadCourse(string $provider_id, string $resource_id): array {
     return $this->loadResource($provider_id, self::TYPE_COURSE, $resource_id);
+  }
+
+  /**
+   * Load single Course resource directly from an external API.
+   *
+   * @param string $temp_store_key
+   *   TempStore key for the Course resource.
+   * @param string $endpoint
+   *   The endpoint from which to fetch data.
+   *
+   * @return array
+   *   An array containing the JSON:API resource data.
+   */
+  public function loadExternalCourse(string $temp_store_key, string $endpoint): array {
+    $validated = $this->occapiTempStore
+      ->validateResourceTempstore($temp_store_key, self::TYPE_COURSE);
+
+    if ($validated) {
+      $response = $this->jsonDataFetcher->load($temp_store_key, $endpoint);
+
+      return \json_decode($response, TRUE);
+    }
+
+    return [];
   }
 
 }

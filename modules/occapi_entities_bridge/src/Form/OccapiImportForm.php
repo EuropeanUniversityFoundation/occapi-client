@@ -14,7 +14,7 @@ use Drupal\occapi_client\JsonDataProcessorInterface;
 use Drupal\occapi_client\JsonDataSchemaInterface;
 use Drupal\occapi_client\OccapiProviderManagerInterface;
 use Drupal\occapi_client\OccapiTempStoreInterface;
-use Drupal\occapi_entities_bridge\OccapiImportManager as Manager;
+use Drupal\occapi_entities_bridge\OccapiImportManagerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -86,7 +86,7 @@ class OccapiImportForm extends FormBase {
   /**
    * OCCAPI entity import manager service.
    *
-   * @var \Drupal\occapi_entities_bridge\OccapiImportManager
+   * @var \Drupal\occapi_entities_bridge\OccapiImportManagerInterface
    */
   protected $importManager;
 
@@ -146,38 +146,17 @@ class OccapiImportForm extends FormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state, string $temp_store_key = NULL) {
-    // Give a user with permission the opportunity to add an entity manually.
-    $can_add_programme = $this->currentUser->hasPermission('create programme');
-    $can_add_course = $this->currentUser->hasPermission('create course');
-    $can_bypass = $this->currentUser
-      ->hasPermission('bypass import occapi entities');
+    $validated = $this->importManager->validateImportPrerequisites($temp_store_key);
 
-    if ($can_add_programme && $can_add_course && $can_bypass) {
-      $add_programme_text = $this->t('add a new Programme');
-      $add_programme_link = Link::fromTextAndUrl($add_programme_text,
-        Url::fromRoute('entity.programme.add_form'))->toString();
+    if (!$validated) { return $form; }
 
-      $add_course_text = $this->t('add a new Course');
-      $add_course_link = Link::fromTextAndUrl($add_course_text,
-        Url::fromRoute('entity.course.add_form'))->toString();
-
-      $notice = $this->t('You can @act and @add_prog or @add_course manually.',[
-        '@act' => $this->t('bypass this form'),
-        '@add_prog' => $add_programme_link,
-        '@add_course' => $add_course_link
-      ]);
-
-      $this->messenger->addMessage($notice);
-    }
+    $this->importManager->checkBypassPermission($this->currentUser);
 
     // Validate the tempstore parameter.
-    $error = $this->occapiTempStore
+    $validated = $this->occapiTempStore
       ->validateResourceTempstore($temp_store_key, self::TYPE_PROGRAMME);
 
-    if ($error) {
-      $this->messenger->addError($error);
-      return $form;
-    }
+    if (!$validated) { return $form; }
 
     // Parse the tempstore parameter to get the OCCAPI provider and its HEI ID.
     $temp_store_params = $this->occapiTempStore->paramsFromKey($temp_store_key);
@@ -185,14 +164,6 @@ class OccapiImportForm extends FormBase {
     $provider_id = $temp_store_params[self::PARAM_PROVIDER];
     $hei_id = $this->providerManager->getProvider($provider_id)->heiId();
     $programme_id = $temp_store_params[self::PARAM_RESOURCE_ID];
-
-    // Check if the Institution is present in the system.
-    $result = $this->importManager->validateInstitution($hei_id);
-
-    if (! $result['status']) {
-      $this->messenger->addError($result['message']);
-      return $form;
-    }
 
     // Load Programme data.
     $this->programmeResource = $this->dataLoader

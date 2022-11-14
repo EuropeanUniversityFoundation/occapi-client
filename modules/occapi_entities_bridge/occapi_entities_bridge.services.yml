@@ -1,7 +1,7 @@
 services:
   occapi_entities_bridge.manager:
     class: Drupal\occapi_entities_bridge\OccapiImportManager
-    arguments: ['@occapi_client.format', '@entity_type.manager', '@ewp_institutions_get.manager', '@occapi_client.fetch', '@occapi_client.json', '@logger.factory', '@messenger', '@occapi_client.manager', '@string_translation']
+    arguments: ['@messenger', '@occapi_client.manager','@occapi_entities_bridge.entity', '@occapi_client.tempstore', '@string_translation']
 
   occapi_entities_bridge.entity:
     class: Drupal\occapi_entities_bridge\OccapiEntityManager
@@ -17,7 +17,7 @@ services:
 
   occapi_entities_bridge.remote:
     class: Drupal\occapi_entities_bridge\OccapiRemoteData
-    arguments: ['@current_user', '@occapi_client.fetch', '@occapi_client.tempstore', '@messenger']
+    arguments: ['@current_user', '@occapi_client.tempstore', '@messenger', '@string_translation']
 
   occapi_entities_bridge.route_subscriber:
     class: Drupal\occapi_entities_bridge\Routing\RouteSubscriber

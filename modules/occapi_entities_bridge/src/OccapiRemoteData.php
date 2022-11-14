@@ -4,9 +4,13 @@ namespace Drupal\occapi_entities_bridge;
 
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Link;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Session\AccountProxyInterface;
-use Drupal\occapi_client\JsonDataFetcherInterface;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\StringTranslation\TranslationInterface;
+use Drupal\Core\Url;
 use Drupal\occapi_client\JsonDataSchemaInterface;
 use Drupal\occapi_client\OccapiTempStoreInterface;
 
@@ -14,6 +18,8 @@ use Drupal\occapi_client\OccapiTempStoreInterface;
  * Handles OCCAPI remote data.
  */
 class OccapiRemoteData implements OccapiRemoteDataInterface {
+
+  use StringTranslationTrait;
 
   const ENTITY_PROGRAMME = OccapiEntityManagerInterface::ENTITY_PROGRAMME;
   const ENTITY_COURSE = OccapiEntityManagerInterface::ENTITY_COURSE;
@@ -26,13 +32,6 @@ class OccapiRemoteData implements OccapiRemoteDataInterface {
    * @var \Drupal\Core\Session\AccountProxyInterface
    */
   protected $currentUser;
-
-  /**
-   * The JSON data fetcher.
-   *
-   * @var \Drupal\occapi_client\JsonDataFetcherInterface
-   */
-  protected $jsonDataFetcher;
 
   /**
    * The shared TempStore key manager.
@@ -53,23 +52,23 @@ class OccapiRemoteData implements OccapiRemoteDataInterface {
    *
    * @param \Drupal\Core\Session\AccountProxyInterface $current_user
    *   Account proxy for the currently logged-in user.
-   * @param \Drupal\occapi_client\JsonDataFetcherInterface $json_data_fetcher
-   *   The JSON data fetcher.
    * @param \Drupal\occapi_client\OccapiTempStoreInterface $occapi_tempstore
    *   The shared TempStore key manager.
    * @param \Drupal\Core\Messenger\MessengerInterface $messenger
    *   The messenger.
+   * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
+   *   The string translation service.
    */
   public function __construct(
     AccountProxyInterface $current_user,
-    JsonDataFetcherInterface $json_data_fetcher,
     OccapiTempStoreInterface $occapi_tempstore,
-    MessengerInterface $messenger
+    MessengerInterface $messenger,
+    TranslationInterface $string_translation
   ) {
     $this->currentUser = $current_user;
-    $this->jsonDataFetcher = $json_data_fetcher;
     $this->occapiTempStore = $occapi_tempstore;
     $this->messenger = $messenger;
+    $this->stringTranslation  = $string_translation;
   }
 
   /**
@@ -221,31 +220,6 @@ class OccapiRemoteData implements OccapiRemoteDataInterface {
     }
 
     return $markup;
-  }
-
-  /**
-   * Load single Course resource directly from an external API.
-   *
-   * @param string $temp_store_key
-   *   TempStore key for the Course resource.
-   * @param string $endpoint
-   *   The endpoint from which to fetch data.
-   *
-   * @return array
-   *   An array containing the JSON:API resource data.
-   */
-  public function loadExternalCourse(string $temp_store_key, string $endpoint): array {
-    $error = $this->occapiTempStore
-      ->validateResourceTempstore($temp_store_key, self::TYPE_COURSE);
-
-    if (empty($error)) {
-      $response = $this->jsonDataFetcher->load($temp_store_key, $endpoint);
-
-      return \json_decode($response, TRUE);
-    }
-
-    $this->messenger->addError($error);
-    return [];
   }
 
 }

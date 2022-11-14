@@ -4,8 +4,8 @@ namespace Drupal\occapi_entities_bridge\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\occapi_entities\Entity\Programme;
-use Drupal\occapi_entities_bridge\OccapiImportManager;
-use Drupal\occapi_entities_bridge\OccapiMetaManager;
+use Drupal\occapi_entities_bridge\OccapiEntityManagerInterface;
+use Drupal\occapi_entities_bridge\OccapiMetadataInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -23,18 +23,18 @@ class OccapiProgrammeMetaController extends ControllerBase {
   /**
    * OCCAPI metadata manager service.
    *
-   * @var \Drupal\occapi_entities_bridge\OccapiMetaManager
+   * @var \Drupal\occapi_entities_bridge\OccapiMetadataInterface
    */
   protected $metaManager;
 
   /**
-   * Constructs an OccapiProgrammeImportController object.
+  * The constructor.
    *
-   * @param \Drupal\occapi_entities_bridge\OccapiMetaManager $meta_manager
+   * @param \Drupal\occapi_entities_bridge\OccapiMetadataInterface $meta_manager
    *   The OCCAPI entity import manager service.
    */
   public function __construct(
-    OccapiMetaManager $meta_manager
+    OccapiMetadataInterface $meta_manager
   ) {
     $this->metaManager = $meta_manager;
   }
@@ -54,8 +54,10 @@ class OccapiProgrammeMetaController extends ControllerBase {
    * @return string
    *   The title for the entity controller.
    */
-  public function relatedCoursesTitle() {
-    return $this->t('Related courses');
+  public function relatedCoursesTitle(Programme $programme) {
+    return $this->t('Courses related to %programme', [
+      '%programme' => $programme->label(),
+    ]);
   }
 
   /**
@@ -71,7 +73,7 @@ class OccapiProgrammeMetaController extends ControllerBase {
       ->getMetaByProgramme($this->entity, $courses);
 
     $markup = $this->metaManager
-      ->metaTable($metadata, OccapiImportManager::COURSE_ENTITY);
+      ->metaTable($metadata, OccapiEntityManagerInterface::ENTITY_COURSE);
 
     $build['content'] = [
       '#type' => 'item',

@@ -17,7 +17,7 @@ services:
 
   occapi_client.load:
     class: Drupal\occapi_client\OccapiDataLoader
-    arguments: ['@occapi_client.fetch', '@occapi_client.json', '@occapi_client.manager', '@occapi_client.tempstore']
+    arguments: ['@occapi_client.fetch', '@occapi_client.json', '@messenger', '@occapi_client.manager', '@occapi_client.tempstore']
 
   occapi_client.manager:
     class: Drupal\occapi_client\OccapiProviderManager
@@ -29,4 +29,4 @@ services:
 
   occapi_client.tempstore:
     class: Drupal\occapi_client\OccapiTempStore
-    arguments: ['@string_translation']
+    arguments: ['@messenger', '@string_translation']

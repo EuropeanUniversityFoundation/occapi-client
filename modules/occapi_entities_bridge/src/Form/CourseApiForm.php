@@ -4,18 +4,36 @@ namespace Drupal\occapi_entities_bridge\Form;
 
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Messenger\MessengerInterface;
-use Drupal\occapi_client\JsonDataFetcher;
+use Drupal\occapi_client\JsonDataFetcherInterface;
 use Drupal\occapi_client\JsonDataProcessor;
+use Drupal\occapi_client\JsonDataSchemaInterface;
+use Drupal\occapi_client\OccapiDataLoaderInterface;
 use Drupal\occapi_client\OccapiFieldManager;
 use Drupal\occapi_client\OccapiProviderManagerInterface;
+use Drupal\occapi_client\OccapiTempStoreInterface;
 use Drupal\occapi_entities\Form\CourseForm;
-use Drupal\occapi_entities_bridge\OccapiImportManager as Manager;
+use Drupal\occapi_entities_bridge\OccapiEntityManagerInterface;
+use Drupal\occapi_entities_bridge\OccapiRemoteDataInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Form controller for the course entity API form.
  */
 class CourseApiForm extends CourseForm {
+
+  const DATA_KEY = JsonDataSchemaInterface::JSONAPI_DATA;
+  const ATTR_KEY = JsonDataSchemaInterface::JSONAPI_ATTR;
+
+  const TYPE_COURSE = OccapiTempStoreInterface::TYPE_COURSE;
+
+  const FIELD_REMOTE_ID = OccapiRemoteDataInterface::FIELD_REMOTE_ID;
+  const FIELD_REMOTE_URL = OccapiRemoteDataInterface::FIELD_REMOTE_URL;
+  const PARAM_EXTERNAL = OccapiRemoteDataInterface::PARAM_EXTERNAL;
+
+  const ENTITY_HEI = OccapiEntityManagerInterface::ENTITY_HEI;
+  const REF_HEI = OccapiEntityManagerInterface::ENTITY_REF[self::ENTITY_HEI];
+  const UNIQUE_HEI = OccapiEntityManagerInterface::UNIQUE_ID[self::ENTITY_HEI];
+  const ENTITY_COURSE = OccapiEntityManagerInterface::ENTITY_COURSE;
 
   /**
    * The remote URL for this Course.
@@ -32,9 +50,16 @@ class CourseApiForm extends CourseForm {
   protected $temp_store_key;
 
   /**
+   * The OCCAPI data loader.
+   *
+   * @var \Drupal\occapi_client\OccapiDataLoaderInterface
+   */
+  protected $dataLoader;
+
+  /**
   * The JSON data fetcher.
   *
-  * @var \Drupal\occapi_client\JsonDataFetcher
+  * @var \Drupal\occapi_client\JsonDataFetcherInterface
   */
   protected $jsonDataFetcher;
 
@@ -44,13 +69,6 @@ class CourseApiForm extends CourseForm {
    * @var \Drupal\Core\Messenger\MessengerInterface
    */
   protected $messenger;
-
-  /**
-   * OCCAPI entity import manager service.
-   *
-   * @var \Drupal\occapi_entities_bridge\OccapiImportManager
-   */
-  protected $importManager;
 
   /**
    * The OCCAPI provider manager.
@@ -67,16 +85,24 @@ class CourseApiForm extends CourseForm {
   protected $remoteData;
 
   /**
+   * The shared TempStore key manager.
+   *
+   * @var \Drupal\occapi_client\OccapiTempStoreInterface
+   */
+  protected $occapiTempStore;
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
     // Instantiates this form class.
     $instance = parent::create($container);
+    $instance->dataLoader      = $container->get('occapi_client.load');
     $instance->jsonDataFetcher = $container->get('occapi_client.fetch');
     $instance->messenger       = $container->get('messenger');
-    $instance->importManager   = $container->get('occapi_entities_bridge.manager');
     $instance->providerManager = $container->get('occapi_client.manager');
     $instance->remoteData      = $container->get('occapi_entities_bridge.remote');
+    $instance->occapiTempStore = $container->get('occapi_client.tempstore');
     return $instance;
   }
 
@@ -93,8 +119,8 @@ class CourseApiForm extends CourseForm {
   public function form(array $form, FormStateInterface $form_state) {
     $form = [];
 
-    $remote_id      = $this->entity->get(Manager::REMOTE_ID)->value;
-    $this->endpoint = $this->entity->get(Manager::REMOTE_URL)->value;
+    $remote_id      = $this->entity->get(self::FIELD_REMOTE_ID)->value;
+    $this->endpoint = $this->entity->get(self::FIELD_REMOTE_URL)->value;
 
     if (empty($remote_id)) {
       $form['header'] = [
@@ -114,14 +140,14 @@ class CourseApiForm extends CourseForm {
     ];
 
     // Get the entity ID of the referenced Institution.
-    $ref_field = $this->entity->get(Manager::REF_HEI)->getValue();
+    $ref_field = $this->entity->get(self::REF_HEI)->getValue();
     $target_id = $ref_field[0]['target_id'];
 
     // Get the Institution ID.
     $hei_id = $this->entityTypeManager
-      ->getStorage(Manager::REF_HEI)
+      ->getStorage(self::REF_HEI)
       ->load($target_id)
-      ->get('hei_id')
+      ->get(self::UNIQUE_HEI)
       ->value;
 
     // Get the OCCAPI provider that covers the Institution ID.
@@ -142,19 +168,24 @@ class CourseApiForm extends CourseForm {
 
     // Build the TempStore key for this Course.
     if (!empty($remote_id)) {
-      $this->temp_store_key = \implode('.', [
-        $provider_id,
-        OccapiProviderManager::COURSE_KEY,
-        $remote_id,
-        Manager::EXT_SUFFIX
-      ]);
+      $temp_store_params = [
+        OccapiTempStoreInterface::PARAM_PROVIDER => $provider_id,
+        OccapiTempStoreInterface::PARAM_FILTER_TYPE => NULL,
+        OccapiTempStoreInterface::PARAM_FILTER_ID => NULL,
+        OccapiTempStoreInterface::PARAM_RESOURCE_TYPE => self::TYPE_COURSE,
+        OccapiTempStoreInterface::PARAM_RESOURCE_ID => $remote_id,
+        OccapiTempStoreInterface::PARAM_EXTERNAL => self::PARAM_EXTERNAL,
+      ];
+
+      $this->temp_store_key = $this->occapiTempStore
+        ->keyFromParams($temp_store_params);
     }
 
     // Load additional Course data from an external API.
     $course_ext = NULL;
 
     if (!empty($this->temp_store_key) && !empty($this->endpoint)) {
-      $course_ext = $this->remoteData
+      $course_ext = $this->dataLoader
         ->loadExternalCourse($this->temp_store_key, $this->endpoint);
     }
 
@@ -164,8 +195,8 @@ class CourseApiForm extends CourseForm {
     if (!empty($course_ext)) {
       $course_ext_fields = OccapiFieldManager::getCourseExtraFields();
 
-      $course_ext_data = $course_ext[JsonDataProcessor::DATA_KEY];
-      $course_ext_attributes = $course_ext_data[JsonDataProcessor::ATTR_KEY];
+      $course_ext_data = $course_ext[self::DATA_KEY];
+      $course_ext_attributes = $course_ext_data[self::ATTR_KEY];
 
       foreach ($course_ext_fields as $key => $value) {
         $display_data[$key] = $course_ext_attributes[$key] ?? [];

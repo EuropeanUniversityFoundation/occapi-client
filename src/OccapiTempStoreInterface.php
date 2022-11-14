@@ -12,6 +12,7 @@ interface OccapiTempStoreInterface {
   const PARAM_FILTER_ID = 'filter_id';
   const PARAM_RESOURCE_TYPE = 'resource_type';
   const PARAM_RESOURCE_ID = 'resource_id';
+  const PARAM_EXTERNAL = 'external';
 
   const TEMPSTORE_KEY_SEPARATOR = '.';
 
@@ -50,10 +51,10 @@ interface OccapiTempStoreInterface {
    * @param bool $single
    *   Whether the key refers to a single resource (defaults to FALSE).
    *
-   * @return string|null
-   *   The error message if any error is detected.
+   * @return bool
+   *   Returns TRUE is validation passes, otherwise FALSE.
    */
-  public function validateTempstoreKey(string $temp_store_key, bool $single = FALSE): ?string;
+  public function validateTempstoreKey(string $temp_store_key, bool $single = FALSE): bool;
 
   /**
    * Validate a collection TempStore key.
@@ -65,10 +66,10 @@ interface OccapiTempStoreInterface {
    * @param string $filter_type|null
    *   OCCAPI entity type key used as filter.
    *
-   * @return string|null
-   *   The error message if any error is detected.
+   * @return bool
+   *   Returns TRUE is validation passes, otherwise FALSE.
    */
-  public function validateCollectionTempstore(string $temp_store_key, ?string $resource_type = NULL, ?string $filter_type = NULL): ?string;
+  public function validateCollectionTempstore(string $temp_store_key, ?string $resource_type = NULL, ?string $filter_type = NULL): bool;
 
   /**
    * Validate a resource TempStore key.
@@ -78,10 +79,10 @@ interface OccapiTempStoreInterface {
    * @param string $resource_type|null
    *   OCCAPI entity type key to validate.
    *
-   * @return string|null
-   *   The error message if any error is detected.
+   * @return bool
+   *   Returns TRUE is validation passes, otherwise FALSE.
    */
-  public function validateResourceTempstore(string $temp_store_key, string $resource_type): ?string;
+  public function validateResourceTempstore(string $temp_store_key, string $resource_type): bool;
 
 
   /**
@@ -92,9 +93,9 @@ interface OccapiTempStoreInterface {
    * @param array $allowed_types
    *   Allowed resource types.
    *
-   * @return string|null
-   *   The error message if any error is detected.
+   * @return bool
+   *   Returns TRUE is validation passes, otherwise FALSE.
    */
-  public function validateResourceType(string $resource_type, array $allowed_types): ?string;
+  public function validateResourceType(string $resource_type, array $allowed_types): bool;
 
 }

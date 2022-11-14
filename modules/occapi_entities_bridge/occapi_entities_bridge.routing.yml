@@ -80,11 +80,12 @@ entity.programme.api_form:
   requirements:
     _permission: 'edit programme'
   options:
+    _admin_route: true
     parameters:
       programme:
         type: entity:programme
 
-# Programme related Courses
+# Course related to Programme
 entity.programme.course:
   path: '/occapi/programme/{programme}/course'
   defaults:
@@ -107,6 +108,7 @@ entity.course.api_form:
   requirements:
     _permission: 'edit course'
   options:
+    _admin_route: true
     parameters:
       course:
         type: entity:course
@@ -124,7 +126,7 @@ entity.course.extended:
       course:
         type: entity:course
 
-# Course related Programmes
+# Programmes related to Course
 entity.course.programme:
   path: '/occapi/course/{course}/programme'
   defaults:

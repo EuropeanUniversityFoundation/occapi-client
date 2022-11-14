@@ -67,6 +67,20 @@ class OccapiProviderManager implements OccapiProviderManagerInterface {
   }
 
   /**
+   * Get a list of enabled OCCAPI providers.
+   *
+   * @return \Drupal\occapi_client\Entity\OccapiProvider[]
+   *   List of OCCAPI providers.
+   */
+  public function getEnabledProviders(): array {
+    $providers = $this->entityTypeManager
+      ->getStorage(self::ENTITY_TYPE)
+      ->loadByProperties(['status' => TRUE]);
+
+    return $providers;
+  }
+
+  /**
    * Get an OCCAPI provider by ID.
    *
    * @param string $id
@@ -130,6 +144,7 @@ class OccapiProviderManager implements OccapiProviderManagerInterface {
       OccapiTempStoreInterface::PARAM_FILTER_ID => NULL,
       OccapiTempStoreInterface::PARAM_RESOURCE_TYPE => self::TYPE_HEI,
       OccapiTempStoreInterface::PARAM_RESOURCE_ID => $provider->heiId(),
+      OccapiTempStoreInterface::PARAM_EXTERNAL => NULL,
     ];
 
     $hei_temp_store_key = $this->occapiTempStore

@@ -2,6 +2,7 @@
 
 namespace Drupal\occapi_client;
 
+use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 
@@ -13,14 +14,25 @@ class OccapiTempStore implements OccapiTempStoreInterface {
   use StringTranslationTrait;
 
   /**
+   * The messenger service.
+   *
+   * @var \Drupal\Core\Messenger\MessengerInterface
+   */
+  protected $messenger;
+
+  /**
    * The constructor.
    *
+   * @param \Drupal\Core\Messenger\MessengerInterface $messenger
+   *   The messenger service.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
    */
   public function __construct(
+    MessengerInterface $messenger,
     TranslationInterface $string_translation
   ) {
+    $this->messenger         = $messenger;
     $this->stringTranslation = $string_translation;
   }
 
@@ -44,6 +56,7 @@ class OccapiTempStore implements OccapiTempStoreInterface {
         self::PARAM_FILTER_ID => NULL,
         self::PARAM_RESOURCE_TYPE => $parts[1],
         self::PARAM_RESOURCE_ID => $parts[2] ?? NULL,
+        self::PARAM_EXTERNAL => NULL,
       ];
 
       return $temp_store_params;
@@ -52,7 +65,8 @@ class OccapiTempStore implements OccapiTempStoreInterface {
     // Handle the generic scenario, check for filters.
     $parts = \explode(self::TEMPSTORE_KEY_SEPARATOR, $temp_store_key);
 
-    $is_filtered = (\count($parts) > 3);
+    $is_external = ($parts[\count($parts) - 1] === self::PARAM_EXTERNAL);
+    $is_filtered = (!$is_external && \count($parts) > 3);
 
     $temp_store_params = [
       self::PARAM_PROVIDER => $parts[0],
@@ -62,6 +76,7 @@ class OccapiTempStore implements OccapiTempStoreInterface {
       self::PARAM_RESOURCE_ID => ($is_filtered)
         ? $parts[4] ?? NULL
         : $parts[2] ?? NULL,
+      self::PARAM_EXTERNAL => ($is_external) ? self::PARAM_EXTERNAL : NULL,
     ];
 
     return $temp_store_params;
@@ -93,6 +108,12 @@ class OccapiTempStore implements OccapiTempStoreInterface {
       $parts[] = $temp_store_params[self::PARAM_RESOURCE_ID];
     }
 
+    $is_external = !empty($temp_store_params[self::PARAM_EXTERNAL]);
+
+    if ($is_external && !$has_filter_type && !$has_filter_id) {
+      $parts[] = $temp_store_params[self::PARAM_EXTERNAL];
+    }
+
     $temp_store_key = \implode(self::TEMPSTORE_KEY_SEPARATOR, $parts);
 
     return $temp_store_key;
@@ -106,45 +127,59 @@ class OccapiTempStore implements OccapiTempStoreInterface {
    * @param boolean $single
    *   Whether the key refers to a single resource (defaults to FALSE).
    *
-   * @return string|null
-   *   The error message if any error is detected.
+   * @return bool
+   *   Returns TRUE is validation passes, otherwise FALSE.
    */
-  public function validateTempstoreKey(string $temp_store_key, bool $single = FALSE): ?string {
+  public function validateTempstoreKey(string $temp_store_key, bool $single = FALSE): bool {
+    $error = NULL;
+
     $temp_store_params = $this->paramsFromKey($temp_store_key);
 
     if (empty($temp_store_params[self::PARAM_PROVIDER])) {
-      return $this->t('Empty parameter: %param', [
+      $error = $this->t('Empty parameter: %param', [
         '%param' => self::PARAM_PROVIDER
       ]);
     }
 
     if (empty($temp_store_params[self::PARAM_RESOURCE_TYPE])) {
-      return $this->t('Empty parameter: %param', [
+      $error = $this->t('Empty parameter: %param', [
         '%param' => self::PARAM_RESOURCE_TYPE
       ]);
     }
 
     if ($single && empty($temp_store_params[self::PARAM_RESOURCE_ID])) {
-      return $this->t('Missing resource ID for single resource.');
+      $error = $this->t('Missing resource ID for single resource.');
     }
 
     if (!$single && !empty($temp_store_params[self::PARAM_RESOURCE_ID])) {
-      return $this->t('Unexpected resource ID for resource collection.');
+      $error = $this->t('Unexpected resource ID for resource collection.');
     }
 
-    $no_filter_type = (empty($temp_store_params[self::PARAM_FILTER_TYPE]));
-    $no_filter_id = (empty($temp_store_params[self::PARAM_FILTER_ID]));
+    $has_filter_type = (!empty($temp_store_params[self::PARAM_FILTER_TYPE]));
+    $has_filter_id = (!empty($temp_store_params[self::PARAM_FILTER_ID]));
 
-    if ($no_filter_type && !$no_filter_id) {
-      return $this->t('Filter type provided, missing filter ID.');
+    if (!$has_filter_type && $has_filter_id) {
+      $error = $this->t('Filter type provided, missing filter ID.');
     }
 
-    if (!$no_filter_type && $no_filter_id) {
-      return $this->t('Filter ID provided, missing filter type.');
+    if ($has_filter_type && !$has_filter_id) {
+      $error = $this->t('Filter ID provided, missing filter type.');
+    }
+
+    $is_external = !empty($temp_store_params[self::PARAM_EXTERNAL]);
+
+    if ($is_external && ($has_filter_type || $has_filter_id)) {
+      $error = $this->t('External keys cannot be filtered.');
+    }
+
+    if (!empty($error ?? NULL)) {
+      $this->messenger->addError($error);
+
+      return FALSE;
     }
 
     // No errors found.
-    return NULL;
+    return TRUE;
   }
 
   /**
@@ -157,13 +192,15 @@ class OccapiTempStore implements OccapiTempStoreInterface {
    * @param string $filter_type|null
    *   OCCAPI entity type key used as filter.
    *
-   * @return string|null
-   *   The error message if any error is detected.
+   * @return bool
+   *   Returns TRUE is validation passes, otherwise FALSE.
    */
-  public function validateCollectionTempstore(string $temp_store_key, ?string $resource_type = NULL, ?string $filter_type = NULL): ?string {
-    $error = $this->validateTempstoreKey($temp_store_key);
+  public function validateCollectionTempstore(string $temp_store_key, ?string $resource_type = NULL, ?string $filter_type = NULL): bool {
+    $error = NULL;
 
-    if (!empty($error)) { return $error; }
+    $validated = $this->validateTempstoreKey($temp_store_key);
+
+    if (!$validated) { return FALSE; }
 
     $temp_store_params = $this->paramsFromKey($temp_store_key);
 
@@ -176,14 +213,14 @@ class OccapiTempStore implements OccapiTempStoreInterface {
         self::TYPE_COURSE,
       ];
 
-      $error = $this->validateResourceType($resource_type, $allowed_types);
+      $validated = $this->validateResourceType($resource_type, $allowed_types);
 
-      if (!empty($error)) { return $error; }
+      if (!$validated) { return FALSE; }
 
       $param_resource_type = $temp_store_params[self::PARAM_RESOURCE_TYPE];
 
       if ($resource_type !== $param_resource_type) {
-        return $this->t('Data contains %param instead of %type.', [
+        $error = $this->t('Data contains %param instead of %type.', [
           '%param' => $param_resource_type,
           '%type' => $resource_type,
         ]);
@@ -191,28 +228,34 @@ class OccapiTempStore implements OccapiTempStoreInterface {
     }
 
     // Validate the filter type.
-    if (!empty($filter_type)) {
+    if (empty($error ?? NULL) && !empty($filter_type)) {
       $allowed_types = [
         self::TYPE_OUNIT,
         self::TYPE_PROGRAMME
       ];
 
-      $error = $this->validateResourceType($filter_type, $allowed_types);
+      $validated = $this->validateResourceType($filter_type, $allowed_types);
 
-      if (!empty($error)) { return $error; }
+      if (!$validated) { return FALSE; }
 
       $param_filter_type = $temp_store_params[self::PARAM_FILTER_TYPE];
 
       if (!empty($filter_type) && ($filter_type !== $param_filter_type)) {
-        return $this->t('Data is filtered by %param instead of %type.', [
+        $error = $this->t('Data is filtered by %param instead of %type.', [
           '%param' => $param_filter_type,
           '%type' => $filter_type,
         ]);
       }
     }
 
+    if (!empty($error ?? NULL)) {
+      $this->messenger->addError($error);
+
+      return FALSE;
+    }
+
     // No errors found.
-    return NULL;
+    return TRUE;
   }
 
   /**
@@ -223,13 +266,15 @@ class OccapiTempStore implements OccapiTempStoreInterface {
    * @param string $resource_type|null
    *   OCCAPI entity type key to validate.
    *
-   * @return string|null
-   *   The error message if any error is detected.
+   * @return bool
+   *   Returns TRUE is validation passes, otherwise FALSE.
    */
-  public function validateResourceTempstore(string $temp_store_key, string $resource_type): ?string {
-    $error = $this->validateTempstoreKey($temp_store_key, TRUE);
+  public function validateResourceTempstore(string $temp_store_key, string $resource_type): bool {
+    $error = NULL;
 
-    if (!empty($error)) { return $error; }
+    $validated = $this->validateTempstoreKey($temp_store_key, TRUE);
+
+    if (!$validated) { return FALSE; }
 
     $temp_store_params = $this->paramsFromKey($temp_store_key);
 
@@ -240,22 +285,28 @@ class OccapiTempStore implements OccapiTempStoreInterface {
         self::TYPE_COURSE,
       ];
 
-      $error = $this->validateResourceType($resource_type, $allowed_types);
+      $validated = $this->validateResourceType($resource_type, $allowed_types);
 
-      if (!empty($error)) { return $error; }
+      if (!$validated) { return FALSE; }
 
       $param_resource_type = $temp_store_params[self::PARAM_RESOURCE_TYPE];
 
       if ($resource_type !== $param_resource_type) {
-        return $this->t('Data contains %param instead of %type.', [
+        $error = $this->t('Data contains %param instead of %type.', [
           '%param' => $param_resource_type,
           '%type' => $resource_type,
         ]);
       }
     }
 
+    if (!empty($error ?? NULL)) {
+      $this->messenger->addError($error);
+
+      return FALSE;
+    }
+
     // No errors found.
-    return NULL;
+    return TRUE;
   }
 
   /**
@@ -266,19 +317,27 @@ class OccapiTempStore implements OccapiTempStoreInterface {
    * @param array $allowed_types
    *   Allowed resource types.
    *
-   * @return string|null
-   *   The error message if any error is detected.
+   * @return bool
+   *   Returns TRUE is validation passes, otherwise FALSE.
    */
-  public function validateResourceType(string $resource_type, array $allowed_types): ?string {
+  public function validateResourceType(string $resource_type, array $allowed_types): bool {
+    $error = NULL;
+
     if (!\in_array($resource_type, $allowed_types)) {
-      return $this->t('Resource type must be one of %allowed, %type given.', [
+      $error = $this->t('Resource type must be one of %allowed, %type given.', [
         '%allowed' => \implode(', ', $allowed_types),
         '%type' => $resource_type,
       ]);
     }
 
+    if (!empty($error ?? NULL)) {
+      $this->messenger->addError($error);
+
+      return FALSE;
+    }
+
     // No errors found.
-    return NULL;
+    return TRUE;
   }
 
 }

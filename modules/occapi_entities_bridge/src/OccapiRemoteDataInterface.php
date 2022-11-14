@@ -3,11 +3,14 @@
 namespace Drupal\occapi_entities_bridge;
 
 use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\Core\Form\FormStateInterface;
 
 /**
  * Defines an interface for an OCCAPI remote data handler.
  */
 interface OccapiRemoteDataInterface {
+
+  const PARAM_EXTERNAL = 'external';
 
   const FIELD_REMOTE_ID = 'remote_id';
   const FIELD_REMOTE_URL = 'remote_url';
@@ -64,18 +67,5 @@ interface OccapiRemoteDataInterface {
    *   Renderable markup.
    */
   public function formatRemoteId(string $remote_id, string $remote_url): string;
-
-  /**
-   * Load single Course resource directly from an external API.
-   *
-   * @param string $temp_store_key
-   *   TempStore key for the Course resource.
-   * @param string $endpoint
-   *   The endpoint from which to fetch data.
-   *
-   * @return array
-   *   An array containing the JSON:API resource data.
-   */
-  public function loadExternalCourse(string $temp_store_key, string $endpoint): array;
 
 }

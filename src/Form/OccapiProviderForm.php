@@ -22,7 +22,7 @@ class OccapiProviderForm extends EntityForm {
   const PARAM_FILTER_ID = OccapiTempStoreInterface::PARAM_FILTER_ID;
   const PARAM_RESOURCE_TYPE = OccapiTempStoreInterface::PARAM_RESOURCE_TYPE;
   const PARAM_RESOURCE_ID = OccapiTempStoreInterface::PARAM_RESOURCE_ID;
-
+  const PARAM_EXTERNAL = OccapiTempStoreInterface::PARAM_EXTERNAL;
 
   /**
    * the JSON data fetcher.
@@ -177,6 +177,7 @@ class OccapiProviderForm extends EntityForm {
         self::PARAM_FILTER_ID => NULL,
         self::PARAM_RESOURCE_TYPE => self::TYPE_HEI,
         self::PARAM_RESOURCE_ID => $hei_id,
+        self::PARAM_EXTERNAL => NULL,
       ];
 
       $temp_store_key = $this->occapiTempStore

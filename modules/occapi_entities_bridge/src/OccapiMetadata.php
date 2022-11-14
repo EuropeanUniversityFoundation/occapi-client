@@ -82,10 +82,8 @@ class OccapiMetadata implements OccapiMetadataInterface {
    *   An array of OCCAPI Course entities keyed by entity ID.
    */
   public function relatedCourses(Programme $programme): array {
-    $this->programme = $programme;
-
-    $entity_id = $this->programme->id();
-    $remote_id = $this->programme->get(self::FIELD_REMOTE_ID)->value;
+    $entity_id = $programme->id();
+    $remote_id = $programme->get(self::FIELD_REMOTE_ID)->value;
 
     $courses = $this->entityTypeManager
       ->getStorage(self::ENTITY_COURSE)

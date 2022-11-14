@@ -13,6 +13,7 @@ use Drupal\occapi_client\JsonDataProcessorInterface;
 use Drupal\occapi_client\JsonDataSchemaInterface;
 use Drupal\occapi_client\OccapiProviderManagerInterface;
 use Drupal\occapi_client\OccapiTempStoreInterface;
+use Drupal\occapi_entities_bridge\OccapiImportManagerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -65,6 +66,13 @@ class OccapiSelectForm extends FormBase {
   protected $dataLoader;
 
   /**
+   * OCCAPI entity import manager service.
+   *
+   * @var \Drupal\occapi_entities_bridge\OccapiImportManagerInterface
+   */
+  protected $importManager;
+
+  /**
    * the JSON data processor.
    *
    * @var \Drupal\occapi_client\JsonDataProcessorInterface
@@ -100,6 +108,7 @@ class OccapiSelectForm extends FormBase {
     $instance = parent::create($container);
     $instance->dataFormatter     = $container->get('occapi_client.format');
     $instance->dataLoader        = $container->get('occapi_client.load');
+    $instance->importManager     = $container->get('occapi_entities_bridge.manager');
     $instance->jsonDataProcessor = $container->get('occapi_client.json');
     $instance->messenger         = $container->get('messenger');
     $instance->providerManager   = $container->get('occapi_client.manager');
@@ -119,32 +128,10 @@ class OccapiSelectForm extends FormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
-    // Give a user with permission the opportunity to add an entity manually.
-    $can_add_programme = $this->currentUser->hasPermission('create programme');
-    $can_add_course = $this->currentUser->hasPermission('create course');
-    $can_bypass = $this->currentUser
-      ->hasPermission('bypass import occapi entities');
+    $this->importManager->checkBypassPermission($this->currentUser);
 
-    if ($can_add_programme && $can_add_course && $can_bypass) {
-      $add_programme_text = $this->t('add a new Programme');
-      $add_programme_link = Link::fromTextAndUrl($add_programme_text,
-        Url::fromRoute('entity.programme.add_form'))->toString();
-
-      $add_course_text = $this->t('add a new Course');
-      $add_course_link = Link::fromTextAndUrl($add_course_text,
-        Url::fromRoute('entity.course.add_form'))->toString();
-
-      $notice = $this->t('You can @act and @add_prog or @add_course manually.',[
-        '@act' => $this->t('bypass this form'),
-        '@add_prog' => $add_programme_link,
-        '@add_course' => $add_course_link
-      ]);
-
-      $this->messenger->addMessage($notice);
-    }
-
-    // Load all available OCCAPI providers.
-    $providers = $this->providerManager->getProviders();
+    // Load all enabled OCCAPI providers.
+    $providers = $this->providerManager->getEnabledProviders();
 
     // Build a select element with the provider list.
     $provider_titles = [];
