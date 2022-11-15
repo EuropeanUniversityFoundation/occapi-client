@@ -56,6 +56,13 @@ class OccapiEntityManager implements OccapiEntityManagerInterface {
   protected $jsonDataProcessor;
 
   /**
+   * The OCCAPI metadata manager.
+   *
+   * @var \Drupal\occapi_entities_bridge\OccapiMetadataInterface
+   */
+  protected $metaManager;
+
+  /**
    * Constructs an OccapiEntityManager object.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
@@ -64,15 +71,19 @@ class OccapiEntityManager implements OccapiEntityManagerInterface {
    *   The JSON data processor.
    * @param \Drupal\occapi_client\JsonDataProcessorInterface $json_data_processor
    *   The JSON data processor.
+   * @param \Drupal\occapi_entities_bridge\OccapiMetadataInterface $meta_manager
+   *   The JSON data processor.
    */
   public function __construct(
     EntityTypeManagerInterface $entity_type_manager,
     OccapiFieldMapInterface $occapi_field_map,
-    JsonDataProcessorInterface $json_data_processor
+    JsonDataProcessorInterface $json_data_processor,
+    OccapiMetadataInterface $meta_manager
   ) {
     $this->entityTypeManager = $entity_type_manager;
     $this->occapiFieldMap    = $occapi_field_map;
     $this->jsonDataProcessor = $json_data_processor;
+    $this->metaManager       = $meta_manager;
   }
 
   /**
@@ -197,9 +208,7 @@ class OccapiEntityManager implements OccapiEntityManagerInterface {
       'entity_type' => $entity_type,
     ], $attribute_data);
 
-    $relationships = $resource_data[self::JSONAPI_REL] ?? [];
-
-    $references = $this->buildEntityReferences($hei_id, $relationships);
+    $references = $this->buildEntityReferences($hei_id, $resource_data);
 
     $extra_fields = $this->buildExtraFields($resource);
 
@@ -209,20 +218,22 @@ class OccapiEntityManager implements OccapiEntityManagerInterface {
   }
 
   /**
-   * Build entity references from resource relationships.
+   * Build entity references from resource data.
    *
    * @param string $hei_id
    *   The Institution ID for the primary entity reference.
-   * @param array $relationships
-   *   The resource relationships.
+   * @param array $resource_data
+   *   The resource data.
    *
    * @return array
    *   The entity references.
    */
-  public function buildEntityReferences(string $hei_id, array $relationships): array {
+  public function buildEntityReferences(string $hei_id, array $resource_data): array {
     $references[self::ENTITY_REF[self::ENTITY_HEI]][] = [
       'target_id' => \array_keys($this->getHeiByHeiId($hei_id))[0],
     ];
+
+    $relationships = $resource_data[self::JSONAPI_REL] ?? [];
 
     foreach ($relationships as $key => $relationship) {
       $rel_data = $this->jsonDataProcessor->getResourceData($relationship);
@@ -244,6 +255,19 @@ class OccapiEntityManager implements OccapiEntityManagerInterface {
         }
       }
     }
+
+    if (\array_key_exists(self::JSONAPI_META, $resource_data)) {
+      $metadata = $resource_data[self::JSONAPI_META];
+      $programme_ids = $this->metaManager->getProgrammeId($metadata);
+
+      foreach ($programme_ids as $id => $entity) {
+        $references[self::ENTITY_REF[self::ENTITY_PROGRAMME]][] = [
+          'target_id' => $id
+        ];
+      }
+    }
+
+    $references = array_unique($references, SORT_REGULAR);
 
     return $references;
   }
@@ -318,24 +342,24 @@ class OccapiEntityManager implements OccapiEntityManagerInterface {
   public function updateEntity(EntityInterface $entity, array $entity_data): EntityInterface {
     // Update entity references.
     foreach (self::TYPE_ENTITY as $entity_type) {
-      $reference_field = self::ENTITY_REF[$entity_type] ?? NULL;
+      $field = self::ENTITY_REF[$entity_type] ?? NULL;
 
-      if (\array_key_exists($reference_field, $entity->getFieldDefinitions())) {
-        $referenced = $entity->get($reference_field)->referencedEntities();
+      if (\array_key_exists($field, $entity->getFieldDefinitions())) {
+        $referenced = $entity->get($field)->referencedEntities();
 
         $referenced_ids = [];
 
-        foreach ($referenced as $i => $target) {
+        foreach ($referenced as $target) {
           $referenced_ids[] = $target->id();
         }
 
-        $new_references = $entity_data[self::JSONAPI_REL][$reference_field] ?? [];
+        $new_references = $entity_data[self::JSONAPI_REL][$field] ?? [];
 
         foreach ($new_references as $field_value) {
           if (!\in_array($field_value['target_id'], $referenced_ids)) {
             $new_item = ['target_id' => $field_value['target_id']];
 
-            $entity->get($reference_field)->appendItem($new_item);
+            $entity->get($field)->appendItem($new_item);
             $entity->save();
           }
         }

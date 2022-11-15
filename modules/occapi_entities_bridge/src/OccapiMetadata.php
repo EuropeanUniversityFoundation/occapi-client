@@ -7,7 +7,6 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\occapi_entities\Entity\Course;
 use Drupal\occapi_entities\Entity\Programme;
-use Drupal\occapi_entities_bridge\OccapiImportManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -20,6 +19,8 @@ class OccapiMetadata implements OccapiMetadataInterface {
   const ENTITY_PROGRAMME = OccapiEntityManagerInterface::ENTITY_PROGRAMME;
   const ENTITY_COURSE = OccapiEntityManagerInterface::ENTITY_COURSE;
   const ENTITY_REF = OccapiEntityManagerInterface::ENTITY_REF;
+
+  const UNIQUE_ID = OccapiEntityManagerInterface::UNIQUE_ID;
 
   const FIELD_REMOTE_ID = OccapiRemoteDataInterface::FIELD_REMOTE_ID;
   const FIELD_META = OccapiRemoteDataInterface::FIELD_META;
@@ -46,29 +47,18 @@ class OccapiMetadata implements OccapiMetadataInterface {
   protected $entityTypeManager;
 
   /**
-   * OCCAPI entity import manager service.
-   *
-   * @var \Drupal\occapi_entities_bridge\OccapiImportManager
-   */
-  protected $importManager;
-
-  /**
    * Constructs an OccapiMetaManager object.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    *   The entity type manager.
-   * @param \Drupal\occapi_entities_bridge\OccapiImportManager $import_manager
-   *   The OCCAPI entity import manager service.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
    */
   public function __construct(
     EntityTypeManagerInterface $entity_type_manager,
-    OccapiImportManager $import_manager,
     TranslationInterface $string_translation
   ) {
     $this->entityTypeManager  = $entity_type_manager;
-    $this->importManager      = $import_manager;
     $this->stringTranslation  = $string_translation;
   }
 
@@ -260,4 +250,39 @@ class OccapiMetadata implements OccapiMetadataInterface {
 
     return render($build);
   }
+
+  /**
+   * Format metadata by entity type as HTML table.
+   *
+   * @param array $metadata
+   *   An array containing a JSON:API resource metadata.
+   *
+   * @return array
+   *   The matching programmes in the system indexed by Drupal ID.
+   */
+  public function getProgrammeId(array $metadata): array {
+    $entity_ids = [];
+
+    if (\array_key_exists(self::SCOPE_PROGRAMME, $metadata)) {
+      foreach ($metadata[self::SCOPE_PROGRAMME] as $item) {
+        $programme_ids[] = $item[self::META_PROGRAMME_ID];
+      }
+    }
+
+    if (!empty($programme_ids)) {
+      foreach ($programme_ids as $programme_id) {
+        $exists = $this->entityTypeManager
+          ->getStorage(self::ENTITY_PROGRAMME)
+          ->loadByProperties([
+            self::UNIQUE_ID[self::ENTITY_PROGRAMME] => $programme_id
+          ]);
+        foreach ($exists as $key => $value) {
+          $entity_ids[$key] = $value;
+        }
+      }
+    }
+
+    return $entity_ids;
+  }
+
 }
