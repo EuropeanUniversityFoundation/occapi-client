@@ -20,7 +20,7 @@ function occapi_entities_bridge_occapi_provider_prepare_form(EntityInterface $en
       ->loadByProperties(['hei_id' => $entity->get('hei_id')]);
 
     if (empty($exists)) {
-      \Drupal::service('messenger')->addWarning($result['message']);
+      \Drupal::service('messenger')->addWarning(t('Missing Institution!'));
     }
   }
 }
