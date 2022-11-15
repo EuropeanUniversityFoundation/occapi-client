@@ -212,7 +212,7 @@ class OccapiImportManager implements OccapiImportManagerInterface {
    * @return array
    *   The loaded data.
    */
-  public function loadData(string $temp_store_key): array {
+  public function importData(string $temp_store_key): array {
     // Get the parameters from the TempStore key.
     $temp_store_params = $this->occapiTempStore->paramsFromKey($temp_store_key);
 
@@ -239,19 +239,6 @@ class OccapiImportManager implements OccapiImportManagerInterface {
 
     $data = $this->jsonDataProcessor->getResourceData($raw);
 
-    return $data ?? [];
-  }
-
-  /**
-   * Import data into the system.
-   *
-   * @param array $data
-   *   Data to import.
-   *
-   * @return array
-   *   The results of the import.
-   */
-  public function importData(array $data): array {
     $hei_id = $this->provider->heiId();
     $create = [];
     $update = [];
@@ -262,7 +249,7 @@ class OccapiImportManager implements OccapiImportManagerInterface {
       $exists = $this->occapiEntityManager->checkExistingEntity($item) ?? [];
 
       $entity_data = $this->occapiEntityManager
-        ->prepareEntityData($item, $hei_id);
+        ->prepareEntityData($item, $hei_id, $filter_type, $filter_id);
 
       if (empty($exists)) {
         $exists = $this->occapiEntityManager

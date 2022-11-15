@@ -186,11 +186,15 @@ class OccapiEntityManager implements OccapiEntityManagerInterface {
    *   The data item to prepare.
    * @param string $hei_id
    *   The Institution ID for the primary entity reference.
+   * @param string $filter_type
+   *   The resource type used as a filter, if any.
+   * @param string $hei_id
+   *   The resource ID used as a filter, if any.
    *
    * @return array
    *   The prepared entity data.
    */
-  public function prepareEntityData(array $resource, string $hei_id): array {
+  public function prepareEntityData(array $resource, string $hei_id, ?string $filter_type = NULL, ?string $filter_id = NULL): array {
     $resource_data = $this->jsonDataProcessor->getResourceData($resource);
     $resource_type = $this->jsonDataProcessor->getResourceType($resource);
     $resource_id = $this->jsonDataProcessor->getResourceId($resource);
@@ -208,7 +212,7 @@ class OccapiEntityManager implements OccapiEntityManagerInterface {
       'entity_type' => $entity_type,
     ], $attribute_data);
 
-    $references = $this->buildEntityReferences($hei_id, $resource_data);
+    $references = $this->buildEntityReferences($resource_data, $hei_id, $filter_type, $filter_id);
 
     $extra_fields = $this->buildExtraFields($resource);
 
@@ -220,18 +224,29 @@ class OccapiEntityManager implements OccapiEntityManagerInterface {
   /**
    * Build entity references from resource data.
    *
-   * @param string $hei_id
-   *   The Institution ID for the primary entity reference.
    * @param array $resource_data
    *   The resource data.
+   * @param string $hei_id
+   *   The Institution ID for the primary entity reference.
+   * @param string $filter_type
+   *   The resource type used as a filter, if any.
+   * @param string $hei_id
+   *   The resource ID used as a filter, if any.
    *
    * @return array
    *   The entity references.
    */
-  public function buildEntityReferences(string $hei_id, array $resource_data): array {
+  public function buildEntityReferences(array $resource_data, string $hei_id, ?string $filter_type = NULL, ?string $filter_id = NULL): array {
     $references[self::ENTITY_REF[self::ENTITY_HEI]][] = [
       'target_id' => \array_keys($this->getHeiByHeiId($hei_id))[0],
     ];
+
+    if (!empty($filter_type) && !empty($filter_id)) {
+      $filter = $this->getEntityByUniqueId($filter_type, $filter_id);
+      $references[self::ENTITY_REF[$filter_type]][] = [
+        'target_id' => \array_keys($filter)[0],
+      ];
+    }
 
     $relationships = $resource_data[self::JSONAPI_REL] ?? [];
 

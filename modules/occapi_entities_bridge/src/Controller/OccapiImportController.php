@@ -101,9 +101,7 @@ class OccapiImportController extends ControllerBase {
       $temp_store_params = $this->occapiTempStore
         ->paramsFromKey($temp_store_key);
 
-      $data = $this->importManager->loadData($temp_store_key);
-
-      $changes = $this->importManager->importData($data);
+      $outcomes = $this->importManager->importData($temp_store_key);
     }
 
     return $this->redirect(self::ROUTE_IMPORT_FORM, $params);
