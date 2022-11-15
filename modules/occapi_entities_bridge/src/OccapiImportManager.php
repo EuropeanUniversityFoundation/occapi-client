@@ -8,7 +8,9 @@ use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\Url;
-use Drupal\occapi_client\OccapiProviderManager;
+use Drupal\occapi_client\OccapiDataLoaderInterface;
+use Drupal\occapi_client\JsonDataProcessorInterface;
+use Drupal\occapi_client\OccapiProviderManagerInterface;
 use Drupal\occapi_client\OccapiTempStoreInterface;
 use Drupal\occapi_entities_bridge\OccapiEntityManagerInterface;
 
@@ -22,32 +24,32 @@ class OccapiImportManager implements OccapiImportManagerInterface {
   const PARAM_PROVIDER = OccapiTempStoreInterface::PARAM_PROVIDER;
   const PARAM_FILTER_TYPE = OccapiTempStoreInterface::PARAM_FILTER_TYPE;
   const PARAM_FILTER_ID = OccapiTempStoreInterface::PARAM_FILTER_ID;
-  // const PARAM_RESOURCE_TYPE = OccapiTempStoreInterface::PARAM_RESOURCE_TYPE;
-  // const PARAM_RESOURCE_ID = OccapiTempStoreInterface::PARAM_RESOURCE_ID;
+  const PARAM_RESOURCE_TYPE = OccapiTempStoreInterface::PARAM_RESOURCE_TYPE;
+  const PARAM_RESOURCE_ID = OccapiTempStoreInterface::PARAM_RESOURCE_ID;
+  const PARAM_EXTERNAL = OccapiTempStoreInterface::PARAM_EXTERNAL;
 
-  // const TYPE_HEI = OccapiTempStoreInterface::TYPE_HEI;
   const TYPE_OUNIT = OccapiTempStoreInterface::TYPE_OUNIT;
-  // const TYPE_PROGRAMME = OccapiTempStoreInterface::TYPE_PROGRAMME;
-  // const TYPE_COURSE = OccapiTempStoreInterface::TYPE_COURSE;
 
-  // Machine names of OCCAPI entity types.
-  const PROGRAMME_ENTITY  = 'programme';
-  const COURSE_ENTITY     = 'course';
+  /**
+   * The OCCAPI provider.
+   *
+   * @var \Drupal\occapi_client\OccapiProvider
+   */
+  protected $provider;
 
-  // Machine name of the entity label.
-  const LABEL_KEY         = 'label';
+  /**
+   * The OCCAPI data loader.
+   *
+   * @var \Drupal\occapi_client\OccapiDataLoaderInterface
+   */
+  protected $dataLoader;
 
-  // Machine names of entity reference fields.
-  const REF_HEI           = 'hei';
-  const REF_PROGRAMME     = 'related_programme';
-
-  // Machine names of OCCAPI extra fields.
-  const REMOTE_ID         = 'remote_id';
-  const REMOTE_URL        = 'remote_url';
-  const JSON_META         = 'meta';
-
-  // TempStore key suffix for external resources.
-  const EXT_SUFFIX       = 'external';
+  /**
+   * The JSON data processor.
+   *
+   * @var \Drupal\occapi_client\JsonDataProcessorInterface
+   */
+  protected $jsonDataProcessor;
 
   /**
    * The messenger service.
@@ -59,7 +61,7 @@ class OccapiImportManager implements OccapiImportManagerInterface {
   /**
    * OCCAPI provider manager service.
    *
-   * @var \Drupal\occapi_client\OccapiProviderManager
+   * @var \Drupal\occapi_client\OccapiProviderManagerInterface
    */
   protected $providerManager;
 
@@ -80,9 +82,13 @@ class OccapiImportManager implements OccapiImportManagerInterface {
   /**
    * The constructor.
    *
+   * @param \Drupal\occapi_client\OccapiDataLoaderInterface $data_loader
+   *   The OCCAPI data loader.
+   * @param \Drupal\occapi_client\JsonDataProcessorInterface $json_data_processor
+   *   The JSON data processor.
    * @param \Drupal\Core\Messenger\MessengerInterface $messenger
    *   The messenger service.
-   * @param \Drupal\occapi_client\OccapiProviderManager $provider_manager
+   * @param \Drupal\occapi_client\OccapiProviderManagerInterface $provider_manager
    *   The provider manager service.
    * @param \Drupal\occapi_entities_bridge\OccapiEntityManagerInterface $occapi_entity_manager
    *   The OCCAPI entity manager.
@@ -92,12 +98,16 @@ class OccapiImportManager implements OccapiImportManagerInterface {
    *   The string translation service.
    */
   public function __construct(
+    OccapiDataLoaderInterface $data_loader,
+    JsonDataProcessorInterface $json_data_processor,
     MessengerInterface $messenger,
-    OccapiProviderManager $provider_manager,
+    OccapiProviderManagerInterface $provider_manager,
     OccapiEntityManagerInterface $occapi_entity_manager,
     OccapiTempStoreInterface $occapi_tempstore,
     TranslationInterface $string_translation
   ) {
+    $this->dataLoader          = $data_loader;
+    $this->jsonDataProcessor   = $json_data_processor;
     $this->messenger           = $messenger;
     $this->providerManager     = $provider_manager;
     $this->occapiEntityManager = $occapi_entity_manager;
@@ -191,6 +201,109 @@ class OccapiImportManager implements OccapiImportManagerInterface {
     }
 
     return TRUE;
+  }
+
+  /**
+   * Load data from a TempStore, depending on parameters.
+   *
+   * @param string $temp_store_key
+   *   TempStore key from which all parameters are derived.
+   *
+   * @return array
+   *   The loaded data.
+   */
+  public function loadData(string $temp_store_key): array {
+    // Get the parameters from the TempStore key.
+    $temp_store_params = $this->occapiTempStore->paramsFromKey($temp_store_key);
+
+    $provider_id = $temp_store_params[self::PARAM_PROVIDER];
+    $filter_type = $temp_store_params[self::PARAM_FILTER_TYPE];
+    $filter_id = $temp_store_params[self::PARAM_FILTER_ID];
+    $resource_type = $temp_store_params[self::PARAM_RESOURCE_TYPE];
+    $resource_id = $temp_store_params[self::PARAM_RESOURCE_ID];
+
+    $this->provider = $this->providerManager->getProvider($provider_id);
+
+    if (!empty($resource_id)) {
+      $raw[] = $this->dataLoader
+        ->loadResource($provider_id, $resource_type, $resource_id);
+    }
+    elseif (!empty($filter_id)) {
+      $raw = $this->dataLoader
+        ->loadFilteredCollection($provider_id, $filter_type, $filter_id, $resource_type);
+    }
+    else {
+      $raw = $this->dataLoader
+        ->loadCollection($provider_id, $resource_type);
+    }
+
+    $data = $this->jsonDataProcessor->getResourceData($raw);
+
+    return $data ?? [];
+  }
+
+  /**
+   * Import data into the system.
+   *
+   * @param array $data
+   *   Data to import.
+   *
+   * @return array
+   *   The results of the import.
+   */
+  public function importData(array $data): array {
+    $hei_id = $this->provider->heiId();
+    $create = [];
+    $update = [];
+
+    foreach ($data as $i => $item) {
+      $unique_id = $this->jsonDataProcessor->getResourceId($item);
+
+      $exists = $this->occapiEntityManager->checkExistingEntity($item) ?? [];
+
+      $entity_data = $this->occapiEntityManager
+        ->prepareEntityData($item, $hei_id);
+
+      if (empty($exists)) {
+        $exists = $this->occapiEntityManager
+          ->createEntity($entity_data['entity_type'], $entity_data);
+
+        foreach ($exists as $key => $entity) {
+          $create[$key] = $entity;
+        }
+      }
+      else {
+        foreach ($exists as $key => $entity) {
+          $update[$key] = $this->occapiEntityManager
+            ->updateEntity($entity, $entity_data);
+        }
+      }
+    }
+
+    $outcomes = ['created' => $create, 'updated' => $update];
+
+    foreach ($outcomes as $change => $list) {
+      if (\count($list) === 1) {
+        foreach ($list as $entity) {
+          $message = $this->t('Successfully @did %entity.', [
+            '@did' => $change,
+            '%entity' => $entity->label(),
+          ]);
+
+          $this->messenger->addMessage($message);
+        }
+      }
+      elseif (\count($list) > 1) {
+        $message = $this->t('Successfully @did @many entities.', [
+          '@did' => $change,
+          '@many' => \count($list),
+        ]);
+
+        $this->messenger->addMessage($message);
+      }
+    }
+
+    return $outcomes;
   }
 
 }

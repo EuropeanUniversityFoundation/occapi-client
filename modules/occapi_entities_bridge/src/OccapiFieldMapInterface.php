@@ -48,7 +48,7 @@ interface OccapiFieldMapInterface {
    * @return array|null
    *   An array in the format [drupal_field => apiAttribute].
    */
-  public function getFieldMap($entity_type): ?array;
+  public function getFieldMap(string $entity_type): ?array;
 
   /**
    * Build entity data from data attributes.

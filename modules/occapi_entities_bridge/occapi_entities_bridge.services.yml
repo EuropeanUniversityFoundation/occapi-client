@@ -1,11 +1,11 @@
 services:
   occapi_entities_bridge.manager:
     class: Drupal\occapi_entities_bridge\OccapiImportManager
-    arguments: ['@messenger', '@occapi_client.manager','@occapi_entities_bridge.entity', '@occapi_client.tempstore', '@string_translation']
+    arguments: ['@occapi_client.load', '@occapi_client.json', '@messenger', '@occapi_client.manager', '@occapi_entities_bridge.entity', '@occapi_client.tempstore', '@string_translation']
 
   occapi_entities_bridge.entity:
     class: Drupal\occapi_entities_bridge\OccapiEntityManager
-    arguments: ['@entity_type.manager']
+    arguments: ['@entity_type.manager', '@occapi_entities_bridge.fieldmap', '@occapi_client.json']
 
   occapi_entities_bridge.fieldmap:
     class: Drupal\occapi_entities_bridge\OccapiFieldMap
