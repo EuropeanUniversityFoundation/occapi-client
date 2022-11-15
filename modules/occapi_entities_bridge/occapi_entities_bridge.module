@@ -14,13 +14,12 @@ use Drupal\Core\Form\FormStateInterface;
  */
 function occapi_entities_bridge_occapi_provider_prepare_form(EntityInterface $entity, $operation, FormStateInterface $form_state) {
   if ($operation == 'preview') {
-    $hei_id = $entity->get('hei_id');
-
     // Check if the Institution is present in the system.
-    $result = \Drupal::service('occapi_entities_bridge.manager')
-      ->validateInstitution($hei_id);
+    $exists = \Drupal::service('entity_type.manager')
+      ->getStorage('hei')
+      ->loadByProperties(['hei_id' => $entity->get('hei_id')]);
 
-    if (! $result['status']) {
+    if (empty($exists)) {
       \Drupal::service('messenger')->addWarning($result['message']);
     }
   }

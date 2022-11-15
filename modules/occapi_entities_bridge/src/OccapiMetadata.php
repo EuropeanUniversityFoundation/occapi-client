@@ -230,14 +230,15 @@ class OccapiMetadata implements OccapiMetadataInterface {
         ->getStorage($entity_type_id)
         ->loadByProperties(['id' => $key]);
 
-      $mandatory = (\array_key_exists(self::META_PROGRAMME_MC, $value)) ?
-        $value[self::META_PROGRAMME_MC] : FALSE;
+      $mandatory = (\array_key_exists(self::META_PROGRAMME_MC, $value))
+        ? $value[self::META_PROGRAMME_MC]
+        : FALSE;
 
       $rows[] = [
         $entity[$key]->toLink(),
         (\array_key_exists(self::META_YEAR, $value)) ?
           $value[self::META_YEAR] : '',
-        $value[self::FIELD_COURSE_TERM],
+        $value[self::FIELD_COURSE_TERM] ?? '',
         ($mandatory) ? $this->t('Yes') : '',
         (\array_key_exists(self::SCOPE, $value)) ?
           $value[self::SCOPE] : '',
