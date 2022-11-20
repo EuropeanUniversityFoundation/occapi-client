@@ -280,9 +280,11 @@ class OccapiEntityManager implements OccapiEntityManagerInterface {
           'target_id' => $id
         ];
       }
-    }
 
-    $references = array_unique($references, SORT_REGULAR);
+      $programmes = $references[self::ENTITY_REF[self::ENTITY_PROGRAMME]] ?? [];
+      $unique = array_unique($programmes, SORT_REGULAR);
+      $references[self::ENTITY_REF[self::ENTITY_PROGRAMME]] = $unique;
+    }
 
     return $references;
   }
@@ -361,6 +363,11 @@ class OccapiEntityManager implements OccapiEntityManagerInterface {
 
       if (\array_key_exists($field, $entity->getFieldDefinitions())) {
         $referenced = $entity->get($field)->referencedEntities();
+
+        // Clean up duplicated entity references.
+        $field_values = $entity->get($field)->getValue();
+        $unique_values = array_unique($field_values, SORT_REGULAR);
+        $entity->set($field, $unique_values)->save();
 
         $referenced_ids = [];
 
