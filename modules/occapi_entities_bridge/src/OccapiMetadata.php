@@ -135,10 +135,12 @@ class OccapiMetadata implements OccapiMetadataInterface {
 
       if (!empty($data)) {
         if (\array_key_exists(self::SCOPE_PROGRAMME, $data)) {
-          $remote_id = $programme->get(self::FIELD_REMOTE_ID)->value;
+          $remote_id = (string) $programme->get(self::FIELD_REMOTE_ID)->value;
 
-          foreach ($data[self::SCOPE_PROGRAMME] as $i => $array) {
-            if ($array[self::META_PROGRAMME_ID] === $remote_id) {
+          foreach ($data[self::SCOPE_PROGRAMME] as $array) {
+            $meta_programme_id = (string) $array[self::META_PROGRAMME_ID];
+
+            if ($meta_programme_id === $remote_id) {
               $metadata[$id] = [
                 self::SCOPE => self::SCOPE_PROGRAMME,
                 self::META_YEAR => $array[self::META_YEAR],
@@ -149,9 +151,12 @@ class OccapiMetadata implements OccapiMetadataInterface {
           }
         }
         elseif (\array_key_exists(self::SCOPE_GLOBAL, $data)) {
-          $eqf_level = $programme->get(self::FIELD_PROGRAMME_EQF)->value;
+          $eqf_level = (int) $programme->get(self::FIELD_PROGRAMME_EQF)->value;
 
-          if ($data[self::SCOPE_GLOBAL][self::META_GLOBAL_EQF] === $eqf_level) {
+          $meta_global = $data[self::SCOPE_GLOBAL];
+          $meta_global_eqf = (int) $meta_global[self::META_GLOBAL_EQF];
+
+          if ($meta_global_eqf === $eqf_level) {
             $metadata[$id] = [
               self::SCOPE => self::SCOPE_GLOBAL,
               self::META_YEAR => $data[self::META_YEAR],
