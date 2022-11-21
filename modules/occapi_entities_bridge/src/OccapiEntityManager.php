@@ -282,7 +282,7 @@ class OccapiEntityManager implements OccapiEntityManagerInterface {
       }
 
       $programmes = $references[self::ENTITY_REF[self::ENTITY_PROGRAMME]] ?? [];
-      $unique = array_unique($programmes, SORT_REGULAR);
+      $unique = array_values(array_unique($programmes, SORT_REGULAR));
       $references[self::ENTITY_REF[self::ENTITY_PROGRAMME]] = $unique;
     }
 
@@ -375,7 +375,7 @@ class OccapiEntityManager implements OccapiEntityManagerInterface {
           $referenced_ids[] = $target->id();
         }
 
-        $new_references = $entity_data[self::JSONAPI_REL][$field] ?? [];
+        $new_references = $entity_data[$field] ?? [];
 
         foreach ($new_references as $field_value) {
           if (!\in_array($field_value['target_id'], $referenced_ids)) {
