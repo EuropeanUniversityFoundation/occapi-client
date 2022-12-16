@@ -139,7 +139,8 @@ class OccapiImportForm extends FormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state, string $temp_store_key = NULL) {
-    $validated = $this->importManager->validateImportPrerequisites($temp_store_key);
+    $validated = $this->importManager
+      ->validateImportPrerequisites($temp_store_key);
 
     if (!$validated) { return $form; }
 

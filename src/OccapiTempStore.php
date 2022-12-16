@@ -271,6 +271,7 @@ class OccapiTempStore implements OccapiTempStoreInterface {
     // Validate the resource type.
     if (!empty($resource_type)) {
       $allowed_types = [
+        self::TYPE_OUNIT,
         self::TYPE_PROGRAMME,
         self::TYPE_COURSE,
       ];
@@ -314,7 +315,7 @@ class OccapiTempStore implements OccapiTempStoreInterface {
     $error = NULL;
 
     if (!\in_array($resource_type, $allowed_types)) {
-      $error = $this->t('Resource type must be one of %allowed, %type given.', [
+      $error = $this->t('Resource type must be one of %allowed; %type given.', [
         '%allowed' => \implode(', ', $allowed_types),
         '%type' => $resource_type,
       ]);

@@ -168,6 +168,55 @@ class OccapiSelectForm extends FormBase {
       '#weight' => '-9',
     ];
 
+    $form['header']['ounit_select'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Organizational Units'),
+      '#options' => [],
+      '#default_value' => '',
+      '#empty_value' => '',
+      '#validated' => TRUE,
+      '#states' => [
+        'disabled' => [
+          ':input[name="provider_select"]' => ['value' => ''],
+        ],
+      ],
+      '#weight' => '-8',
+    ];
+
+    $form['header']['ounit_actions'] = [
+      '#type' => 'container',
+      '#title' => $this->t('Actions'),
+      '#weight' => '-7',
+    ];
+
+    $form['header']['ounit_actions']['programme'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Load Programmes'),
+      '#submit' => [[$this, 'ounitProgrammeSubmit']],
+      '#states' => [
+        'invisible' => [
+          ':input[name="provider_select"]' => ['value' => ''],
+        ],
+        'disabled' => [
+          ':input[name="ounit_select"]' => ['value' => ''],
+        ],
+      ],
+    ];
+
+    $form['header']['ounit_actions']['course'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Load Courses'),
+      '#submit' => [[$this, 'ounitCourseSubmit']],
+      '#states' => [
+        'invisible' => [
+          ':input[name="provider_select"]' => ['value' => ''],
+        ],
+        'disabled' => [
+          ':input[name="ounit_select"]' => ['value' => ''],
+        ],
+      ],
+    ];
+
     $form['header']['programme_select'] = [
       '#type' => 'select',
       '#title' => $this->t('Programmes'),
@@ -186,7 +235,7 @@ class OccapiSelectForm extends FormBase {
           ':input[name="provider_select"]' => ['value' => ''],
         ],
       ],
-      '#weight' => '-8',
+      '#weight' => '-6',
     ];
 
     $this->emptyData = $this->t('Nothing to display.');
@@ -195,7 +244,7 @@ class OccapiSelectForm extends FormBase {
       '#type' => 'details',
       '#open' => TRUE,
       '#title' => $this->t('Data'),
-      '#weight' => '-7',
+      '#weight' => '-4',
     ];
 
     $form['data']['empty'] = [
@@ -246,6 +295,70 @@ class OccapiSelectForm extends FormBase {
   /**
    * {@inheritdoc}
    */
+  public function ounitProgrammeSubmit(array &$form, FormStateInterface $form_state) {
+    $provider_id = $form_state->getValue('provider_select');
+    $ounit_id = $form_state->getValue('ounit_select');
+
+    $ounit = $this->dataLoader->loadOunit($provider_id, $ounit_id);
+    $programme_link = $this->jsonDataProcessor
+      ->getResourceLinkByType($ounit, self::TYPE_PROGRAMME);
+
+    if (empty($programme_link)) {
+      $message = $this->t('Programme endpoint is not available.');
+      $form_state->setErrorByName('ounit_select', $message);
+      return;
+    }
+
+    $temp_store_params = [
+      OccapiTempStoreInterface::PARAM_PROVIDER => $provider_id,
+      OccapiTempStoreInterface::PARAM_FILTER_TYPE => self::TYPE_OUNIT,
+      OccapiTempStoreInterface::PARAM_FILTER_ID => $ounit_id,
+      OccapiTempStoreInterface::PARAM_RESOURCE_TYPE => self::TYPE_PROGRAMME,
+      OccapiTempStoreInterface::PARAM_RESOURCE_ID => NULL,
+    ];
+
+    $temp_store_key = $this->occapiTempStore->keyFromParams($temp_store_params);
+
+    $form_state->setRedirect('occapi_entities_bridge.import',[
+      'temp_store_key' => $temp_store_key
+    ]);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function ounitCourseSubmit(array &$form, FormStateInterface $form_state) {
+    $provider_id = $form_state->getValue('provider_select');
+    $ounit_id = $form_state->getValue('ounit_select');
+
+    $ounit = $this->dataLoader->loadOunit($provider_id, $ounit_id);
+    $course_link = $this->jsonDataProcessor
+      ->getResourceLinkByType($ounit, self::TYPE_COURSE);
+
+    if (empty($course_link)) {
+      $message = $this->t('Course endpoint is not available.');
+      $form_state->setErrorByName('ounit_select', $message);
+      return;
+    }
+
+    $temp_store_params = [
+      OccapiTempStoreInterface::PARAM_PROVIDER => $provider_id,
+      OccapiTempStoreInterface::PARAM_FILTER_TYPE => self::TYPE_OUNIT,
+      OccapiTempStoreInterface::PARAM_FILTER_ID => $ounit_id,
+      OccapiTempStoreInterface::PARAM_RESOURCE_TYPE => self::TYPE_COURSE,
+      OccapiTempStoreInterface::PARAM_RESOURCE_ID => NULL,
+    ];
+
+    $temp_store_key = $this->occapiTempStore->keyFromParams($temp_store_params);
+
+    $form_state->setRedirect('occapi_entities_bridge.import',[
+      'temp_store_key' => $temp_store_key
+    ]);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $provider_id = $form_state->getValue('provider_select');
     $programme_id = $form_state->getValue('programme_select');
@@ -275,6 +388,7 @@ class OccapiSelectForm extends FormBase {
     $provider_id = $form_state->getValue('provider_select');
 
     $options = ['' => '- None -'];
+    $ounit_options = $options;
 
     if ($provider_id) {
       $provider = $this->providerManager->getProvider($provider_id);
@@ -299,6 +413,9 @@ class OccapiSelectForm extends FormBase {
 
         $ounit_collection = $this->dataLoader->loadOunits($provider_id);
         $ounit_data = $ounit_collection[self::DATA_KEY];
+
+        $ounit_options += $this->jsonDataProcessor
+          ->getResourceTitles($ounit_collection);
 
         foreach ($ounit_data as $i => $resource) {
           $ounit_id = $this->jsonDataProcessor->getResourceId($resource);
@@ -327,6 +444,7 @@ class OccapiSelectForm extends FormBase {
       }
     }
 
+    $form['header']['ounit_select']['#options'] = $ounit_options;
     $form['header']['programme_select']['#options'] = $options;
     return $form['header'];
   }
