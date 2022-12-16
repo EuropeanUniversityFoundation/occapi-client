@@ -22,6 +22,7 @@ class OccapiDataLoader implements OccapiDataLoaderInterface {
   const TYPE_COURSE = OccapiTempStoreInterface::TYPE_COURSE;
 
   const DATA_KEY = JsonDataSchemaInterface::JSONAPI_DATA;
+  const ID_KEY = JsonDataSchemaInterface::JSONAPI_ID;
   const LINKS_KEY = JsonDataSchemaInterface::JSONAPI_LINKS;
   const SELF_KEY = JsonDataSchemaInterface::JSONAPI_SELF;
 
@@ -258,7 +259,36 @@ class OccapiDataLoader implements OccapiDataLoaderInterface {
    *   An array containing the JSON:API resource data.
    */
   public function loadResource(string $provider_id, string $resource_type, string $resource_id): array {
-    $collection = $this->loadCollection($provider_id, $resource_type);
+    // Account for OUnit filtering first.
+    $has_ounits = $this->providerManager
+      ->getProvider($provider_id)
+      ->get('ounit_filter');
+
+    if ($has_ounits && $resource_type !== self::TYPE_OUNIT) {
+      $ounit_collection = $this->loadOunits($provider_id);
+      $ounit_data = $ounit_collection[self::DATA_KEY];
+
+      foreach ($ounit_data as $ounit) {
+        $target_collection = $this->loadFilteredCollection(
+          $provider_id,
+          self::TYPE_OUNIT,
+          $ounit[self::ID_KEY],
+          $resource_type
+        );
+
+        $target_data = $target_collection[self::DATA_KEY];
+
+        foreach ($target_data as $resource) {
+          if ($resource[self::ID_KEY] === $resource_id) {
+            $collection = $target_collection;
+          }
+        }
+      }
+    }
+    else {
+      $collection = $this->loadCollection($provider_id, $resource_type);
+    }
+
     $collection_has_data = \array_key_exists(self::DATA_KEY, $collection);
 
     if (empty($collection) || !$collection_has_data ) { return []; }
@@ -276,7 +306,6 @@ class OccapiDataLoader implements OccapiDataLoaderInterface {
 
     $temp_store_key = $this->occapiTempStore
       ->keyFromParams($temp_store_params);
-
 
     // If data is present in TempStore the endpoint is ignored.
     $endpoint = '';
