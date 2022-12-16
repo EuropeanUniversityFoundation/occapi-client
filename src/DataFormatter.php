@@ -179,7 +179,7 @@ class DataFormatter {
 
     $header_len = \count($header);
 
-    foreach ($resource[Json::LINKS_KEY] as $key => $link) {
+    foreach ($resource[Json::LINKS_KEY] ?? [] as $key => $link) {
       $header_text = (\count($header) === $header_len) ? Json::LINKS_KEY : '';
       $header[] = $header_text;
     }
@@ -194,12 +194,12 @@ class DataFormatter {
         $attribute = $this->jsonDataProcessor
           ->getResourceAttribute($resource, $key);
 
-        $row[] = $attribute[$key];
+        $row[] = $attribute[$key] ?? '';
       }
     }
 
     $options = ['attributes' => ['target' => '_blank']];
-    foreach ($resource[Json::LINKS_KEY] as $key => $link) {
+    foreach ($resource[Json::LINKS_KEY] ?? [] as $key => $link) {
       $uri = $link[Json::HREF_KEY];
       $row[] = Link::fromTextAndUrl($key, Url::fromUri($uri, $options));
     }
@@ -258,7 +258,7 @@ class DataFormatter {
           $attribute = $this->jsonDataProcessor
             ->getResourceAttribute($resource, $key);
 
-          $row[] = $attribute[$key];
+          $row[] = $attribute[$key] ?? '';
         }
       }
 
