@@ -4,6 +4,7 @@ namespace Drupal\occapi_entities_bridge\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Render\RendererInterface;
 use Drupal\occapi_client\JsonDataProcessor;
 use Drupal\occapi_client\JsonDataSchemaInterface;
 use Drupal\occapi_client\OccapiDataLoaderInterface;
@@ -77,6 +78,13 @@ class OccapiCourseExtendedController extends ControllerBase {
   protected $occapiTempStore;
 
   /**
+   * The renderer service.
+   *
+   * @var \Drupal\Core\Render\RendererInterface
+   */
+  protected $renderer;
+
+  /**
    * The constructor.
    *
    * @param \Drupal\occapi_client\OccapiDataLoaderInterface $data_loader
@@ -89,19 +97,23 @@ class OccapiCourseExtendedController extends ControllerBase {
    *   The OCCAPI remote data handler.
    * @param \Drupal\occapi_client\OccapiTempStoreInterface $occapi_tempstore
    *   The shared TempStore key manager.
+   * @param \Drupal\Core\Render\RendererInterface $renderer
+   *   The renderer service.
    */
   public function __construct(
     OccapiDataLoaderInterface $data_loader,
     EntityTypeManagerInterface $entity_type_manager,
     OccapiProviderManagerInterface $provider_manager,
     OccapiRemoteDataInterface $remote_data,
-    OccapiTempStoreInterface $occapi_tempstore
+    OccapiTempStoreInterface $occapi_tempstore,
+    RendererInterface $renderer
   ) {
     $this->dataLoader        = $data_loader;
     $this->entityTypeManager = $entity_type_manager;
     $this->providerManager   = $provider_manager;
     $this->remoteData        = $remote_data;
     $this->occapiTempStore   = $occapi_tempstore;
+    $this->renderer          = $renderer;
   }
 
   /**
@@ -216,7 +228,7 @@ class OccapiCourseExtendedController extends ControllerBase {
     $markup .= '<details open>';
     $markup .= '<summary><strong>' . $title . '</strong></summary>';
     $markup .= '<div class="details-wrapper">';
-    $markup .= render($pre_render);
+    $markup .= $this->renderer->render($pre_render);
     $markup .= '</div>';
     $markup .= '</details>';
 

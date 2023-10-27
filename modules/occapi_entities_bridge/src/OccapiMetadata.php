@@ -3,6 +3,7 @@
 namespace Drupal\occapi_entities_bridge;
 
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\occapi_entities\Entity\Course;
@@ -47,18 +48,29 @@ class OccapiMetadata implements OccapiMetadataInterface {
   protected $entityTypeManager;
 
   /**
+   * The renderer service.
+   *
+   * @var \Drupal\Core\Render\RendererInterface
+   */
+  protected $renderer;
+
+  /**
    * Constructs an OccapiMetaManager object.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    *   The entity type manager.
+   * @param \Drupal\Core\Render\RendererInterface $renderer
+   *   The renderer service.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
    */
   public function __construct(
     EntityTypeManagerInterface $entity_type_manager,
+    RendererInterface $renderer,
     TranslationInterface $string_translation
   ) {
     $this->entityTypeManager  = $entity_type_manager;
+    $this->renderer           = $renderer;
     $this->stringTranslation  = $string_translation;
   }
 
@@ -253,7 +265,7 @@ class OccapiMetadata implements OccapiMetadataInterface {
       '#rows' => $rows,
     ];
 
-    return render($build);
+    return $this->renderer->render($build);
   }
 
   /**

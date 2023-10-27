@@ -290,7 +290,7 @@ class OccapiBloatedImportManager implements OccapiImportManagerInterface {
 
       $message = $this->t('Institution with ID <code>@hei_id</code> already exists: @link', [
         '@hei_id' => $hei_id,
-        '@link' => render($renderable),
+        '@link' => \Drupal::service('renderer')->render($renderable),
       ]);
 
       $status = TRUE;
@@ -355,7 +355,7 @@ class OccapiBloatedImportManager implements OccapiImportManagerInterface {
           $renderable = $entity->toLink()->toRenderable();
         }
         $message = $this->t('Programme successfully created: @link', [
-          '@link' => render($renderable),
+          '@link' => \Drupal::service('renderer')->render($renderable),
         ]);
         $this->messenger->addMessage($message);
       }
@@ -369,7 +369,7 @@ class OccapiBloatedImportManager implements OccapiImportManagerInterface {
         $renderable = $entity->toLink()->toRenderable();
       }
       $message = $this->t('Programme already exists: @link', [
-        '@link' => render($renderable),
+        '@link' => \Drupal::service('renderer')->render($renderable),
       ]);
       $this->messenger->addWarning($message);
     }

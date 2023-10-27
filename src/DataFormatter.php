@@ -2,9 +2,10 @@
 
 namespace Drupal\occapi_client;
 
+use Drupal\Core\Link;
+use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\Core\Link;
 use Drupal\Core\Url;
 use Drupal\occapi_client\JsonDataProcessor as Json;
 use Drupal\occapi_client\OccapiFieldManager as Fields;
@@ -17,18 +18,25 @@ class DataFormatter {
   use StringTranslationTrait;
 
   /**
-  * The JSON data processor.
-  *
-  * @var \Drupal\occapi_client\JsonDataProcessor
-  */
+   * The JSON data processor.
+   *
+   * @var \Drupal\occapi_client\JsonDataProcessor
+   */
   protected $jsonDataProcessor;
 
   /**
-  * The OCCAPI field manager.
-  *
-  * @var \Drupal\occapi_client\OccapiFieldManager
-  */
+   * The OCCAPI field manager.
+   *
+   * @var \Drupal\occapi_client\OccapiFieldManager
+   */
   protected $fieldManager;
+
+  /**
+   * The renderer service.
+   *
+   * @var \Drupal\Core\Render\RendererInterface
+   */
+  protected $renderer;
 
   /**
    * The constructor.
@@ -37,16 +45,20 @@ class DataFormatter {
    *   The JSON data processor.
    * @param \Drupal\occapi_client\OccapiFieldManager $field_manager
    *   The OCCAPI field manager.
+   * @param \Drupal\Core\Render\RendererInterface $renderer
+   *   The renderer service.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
    */
   public function __construct(
     JsonDataProcessor $json_data_processor,
     OccapiFieldManager $field_manager,
+    RendererInterface $renderer,
     TranslationInterface $string_translation
   ) {
     $this->jsonDataProcessor  = $json_data_processor;
     $this->fieldManager       = $field_manager;
+    $this->renderer           = $renderer;
     $this->stringTranslation  = $string_translation;
   }
 
@@ -100,7 +112,7 @@ class DataFormatter {
       $build['table']['#empty'] = $this->t('An error occurred.');
     }
 
-    return render($build);
+    return $this->renderer->render($build);
   }
 
   /**
@@ -148,7 +160,7 @@ class DataFormatter {
       '#rows' => $rows,
     ];
 
-    return render($build);
+    return $this->renderer->render($build);
   }
 
   /**
@@ -212,7 +224,7 @@ class DataFormatter {
       '#rows' => $rows,
     ];
 
-    return render($build);
+    return $this->renderer->render($build);
   }
 
   /**
@@ -278,7 +290,7 @@ class DataFormatter {
       '#rows' => $rows,
     ];
 
-    return render($build);
+    return $this->renderer->render($build);
   }
 
 }
