@@ -1,13 +1,32 @@
 {
-  "name": "euf/occapi_client",
-  "type": "drupal-module",
-  "description": "Drupal implementation of an Open Course Catalogue API client.",
-  "keywords": [
-  ],
-  "homepage": "",
-  "minimum-stability": "dev",
-  "support": {
-    "issues": "",
-    "source": ""
-  }
+    "name": "euf/occapi_client",
+    "type": "drupal-module",
+    "description": "Implements an Open Course Catalogue API client.",
+    "keywords": [
+        "Drupal",
+        "OCCAPI"
+    ],
+    "homepage": "https://github.com/EuropeanUniversityFoundation/occapi_client",
+    "support": {
+        "issues": "https://github.com/EuropeanUniversityFoundation/occapi_client/issues",
+        "source": "https://github.com/EuropeanUniversityFoundation/occapi_client"
+    },
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "Tiago Simões",
+            "email": "tiago.simoes@uni-foundation.eu",
+            "role": "Maintainer"
+        }
+    ],
+    "suggest": {
+        "euf/occapi_entities": "Implements Open Course Catalogue API Courses and Programmes as content entity types."
+    },
+    "minimum-stability": "dev",
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://packages.uni-foundation.eu"
+        }
+    ]
 }
