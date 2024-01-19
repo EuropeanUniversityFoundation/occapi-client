@@ -9,7 +9,7 @@ services:
 
   occapi_client.format:
     class: Drupal\occapi_client\DataFormatter
-    arguments: ['@occapi_client.json', '@occapi_client.field_manager', '@string_translation']
+    arguments: ['@occapi_client.json', '@occapi_client.field_manager', '@renderer', '@string_translation']
 
   occapi_client.json:
     class: Drupal\occapi_client\JsonDataProcessor
