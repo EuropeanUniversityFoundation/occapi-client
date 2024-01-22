@@ -13,7 +13,7 @@ services:
 
   occapi_entities_bridge.meta:
     class: Drupal\occapi_entities_bridge\OccapiMetadata
-    arguments: ['@entity_type.manager', '@string_translation']
+    arguments: ['@entity_type.manager', '@renderer', '@string_translation']
 
   occapi_entities_bridge.remote:
     class: Drupal\occapi_entities_bridge\OccapiRemoteData
