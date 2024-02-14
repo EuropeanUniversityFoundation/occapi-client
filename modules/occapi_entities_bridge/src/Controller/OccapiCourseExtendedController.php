@@ -125,7 +125,8 @@ class OccapiCourseExtendedController extends ControllerBase {
       $container->get('entity_type.manager'),
       $container->get('occapi_client.manager'),
       $container->get('occapi_entities_bridge.remote'),
-      $container->get('occapi_client.tempstore')
+      $container->get('occapi_client.tempstore'),
+      $container->get('renderer')
     );
   }
 
